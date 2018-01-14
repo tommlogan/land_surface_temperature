@@ -1,0 +1,11 @@
+*.Rhistory
+exampleData.*
+literature
+*.odt
+*.RData
+bayesnet
+data
+maps
+**/_scratch
+.Rproj.user
+figs
