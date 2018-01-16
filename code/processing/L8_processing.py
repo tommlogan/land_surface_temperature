@@ -8,6 +8,7 @@ Input:
 Output:
         land surface temperature (oC)
         albedo
+        ndvi
 
 Notes:
         It is essential that the two raster files have the same:
@@ -22,11 +23,8 @@ Notes:
                 until they have the exact same cell size.
 '''
 
-
-
-
 from PIL import Image
-import numpy as np 
+import numpy as np
 from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import osr
@@ -39,7 +37,7 @@ os.chdir('F:/UrbanDataProject/land_surface_temperature/data/cities/losangeles/20
 city = 'la'
 file_code = 'LC80410362016174LGN00'
 T_0 = 302.039 #max temp. observed in city (https://www.wunderground.com/history/?MR=1)
-M_L = 3.342e-4 # Band-10 specific multiplicative rescaling factor from the metadata 
+M_L = 3.342e-4 # Band-10 specific multiplicative rescaling factor from the metadata
 A_L = 0.10000 # Band-10 specific additive rescaling factor from the metadata
 K_1 = 774.8853 # Band-specific thermal conversion constant from the metadata
 K_2 =  1321.0789 # Band-specific thermal conversion constant from the metadata
@@ -79,7 +77,7 @@ def create_heatmap(filename,out_filename):
 
     #Next Step 3 in ppt
     T_sensor = step3(L_lambda)
-    
+
     temp_surface = step4(T_sensor, T_0,lc)
     temp_surface = celsius(temp_surface)
     # write to  tif
@@ -137,7 +135,7 @@ def reflectance(dn):
     mult_band = 2.0e-5
     add_band = -0.1
     refl = mult_band * dn + add_band
-    return refl 
+    return refl
 
 
 def albedo(set1_5):
@@ -148,8 +146,8 @@ def albedo(set1_5):
         reflect_band[i] = reflectance(ds.ReadAsArray())
         i += 1
 
-    alpha = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) + 
-            (0.373*reflect_band[2]) + (0.085*reflect_band[3]) + 
+    alpha = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) +
+            (0.373*reflect_band[2]) + (0.085*reflect_band[3]) +
             (0.072*reflect_band[4]) - 0.018) / 1.016
 
     array_to_raster(alpha, out_filename['albedo'], ds)
