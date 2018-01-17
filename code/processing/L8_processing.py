@@ -29,7 +29,11 @@ from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import osr
 import os
-import logging
+
+# init logging
+import sys
+sys.path.append("..")
+from logger_config import *
 logger = logging.getLogger(__name__)
 
 os.chdir('F:/UrbanDataProject/land_surface_temperature/data/cities/losangeles/2016-06-22 LC80410362016174LGN00')
@@ -51,11 +55,60 @@ b4 = file_code + '_B4.tif'
 b5 = file_code + '_B5.tif'
 set1_5 = [b1, b2, b3, b4, b5]
 
+def main():
+    '''
+        1. Reads in metadata
+        2. Creates map of land surface temperature
+        3. Creates map of NVDI
+        4. Creates map of albedo
+    '''
 
+    # Create map of land surface temperature
+    create_heatmap(filename, out_filename)
+
+    # create nvdi map
+    calc_NDVI(set1_5)
+
+    # create map of albedo
+    albedo(set1_5)
+
+def read_image_list():
+    '''
+        Loop through the satellite image list
+        Return:
+            Satellite id
+            Temperature (unit?)
+    '''
+
+def read_metadata():
+    '''
+        For the image read the metadata txt file
+        Return
+            Dictionary of metadata
+    '''
+    # list of variables needed from metadata
+    meta_variables = set(['RADIANCE_MULT_BAND_10','RADIANCE_ADD_BAND_10'])
+
+    # init dictionary
+    meta_dict = dict.fromkeys(meta_variables)
+    # open the metadata file
+    metadata_fn = 'LC08_L1TP_015033_20170907_20170926_01_T1_MTL.txt'
+    with open(metadata_fn,'r') as fid:
+        for line in fid:
+            elements = line.split()
+            var = meta_variables.intersection(elements)
+            if var:
+                meta_dict[list(var)[0]] = float(elements[-1])
+
+        if
+
+    return meta_dict
 
 def create_heatmap(filename,out_filename):
-    ''' returns the land surface temperatue based on satellite imagery
     '''
+        Returns the land surface temperatue based on satellite imagery
+    '''
+    logger.info('Starting LST calculations')
 
     print("You're operating in " + os.getcwd())
     # open the satellite imagery
@@ -63,11 +116,11 @@ def create_heatmap(filename,out_filename):
     dn = ds.ReadAsArray()
     print("L8 tif size: " + str(np.shape(dn)))
 
-    # Step 1: Conversion to TOA Radiance
-    TOA = step1(dn)
+    # Conversion to TOA Radiance
+    TOA = calc_TOA(dn)
 
     # Step 2: Emissivity Correction
-    #returns an emissivity map from land cove
+    #returns an emissivity map from land cover
     land_cover = gdal.Open(lc_filename)
     lc = land_cover.ReadAsArray()
     print("LC tif size: " + str(np.shape(lc)))
@@ -85,12 +138,16 @@ def create_heatmap(filename,out_filename):
     array_to_raster(output, out_filename['lst'], land_cover)
 
 
-def step1(Q_cal):
-    ''' band 10 DN data can be converted to TOA spectral radiance '''
-    # First get Constants  -note: automate this step later (text parsing)
+def calc_TOA(dn):
+    '''
+        Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band 10 digital
+        number (DN) data (also refered to as the Q_cal - quantized and
+        calibrated standard product pixel value)
+    '''
 
-    L_lambda = M_L * Q_cal + A_L # TOA spectral radiance
-    return(L_lambda)
+    TOAr = meta_dict['RADIANCE_MULT_BAND_10'] * dn + meta_dict['RADIANCE_ADD_BAND_10']
+
+    return(TOAr)
 
 
 def get_emissivity(land_cover):
@@ -206,6 +263,4 @@ def array_to_raster(output, out_filename, ds):
 
 
 if __name__ == '__main__':
-    create_heatmap(filename, out_filename)
-    albedo(set1_5)
-    calc_NDVI(set1_5)
+    main()

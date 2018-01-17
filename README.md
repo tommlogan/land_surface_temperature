@@ -24,6 +24,8 @@ Maybe will add a couple of cities from non-industrialized countries to see if th
 
 
 #### 1.1 Download the satellite images
+I selected the most recent four/five images per city and day/night where there was no cloud cover over the city of interest.
+
   1. Website: https://earthexplorer.usgs.gov/
   2. Enter Search Criteria:
     1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
@@ -45,12 +47,17 @@ Maybe will add a couple of cities from non-industrialized countries to see if th
 
 #### 1.2 Metadata
   `metadata.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed.
-  1. df
+  1. As data is downloaded, add it to the csv
+  2. The maximum daily temperature (in `UNITS?`) for the day needs to be retrieved from...
 
 #### 1.3 Process satellite images to LST, albedo, NDVI
+This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad, H. (2016). Analyzing land surface temperature distribution ... *Modeling Earth Systems and Environment.*](https://www.researchgate.net/publication/301797360_Analyzing_land_surface_temperature_distribution_in_response_to_land_useland_cover_change_using_split_window_algorithm_and_spectral_radiance_model_in_Sundarban_Biosphere_Reserve_India)
   1. df
 
 #### 1.4 Calculate average of LST, albedo, NDVI
+  1. df
+
+#### 1.5 Grid data for analysis
   1. df
 
 
