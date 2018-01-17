@@ -94,13 +94,17 @@ def read_metadata():
     # open the metadata file
     metadata_fn = 'LC08_L1TP_015033_20170907_20170926_01_T1_MTL.txt'
     with open(metadata_fn,'r') as fid:
+        # loop lines in text file
         for line in fid:
+            # divide line into words, split by space
             elements = line.split()
+            # intersect with metavariables to return set of variable name if it is on line
             var = meta_variables.intersection(elements)
-            if var:
-                meta_dict[list(var)[0]] = float(elements[-1])
-
-        if
+            if var: # if not empty set
+                # extract the variable
+                var = list(var)[0]
+                # add to dictionary
+                meta_dict[var] = float(elements[-1])
 
     return meta_dict
 
