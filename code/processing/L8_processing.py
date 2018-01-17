@@ -108,9 +108,9 @@ def read_metadata():
 
     return meta_dict
 
-def create_heatmap(filename,out_filename):
+def calc_LST(filename,out_filename):
     '''
-        Returns the land surface temperatue based on satellite imagery
+        Returns the land surface temperature (LST) based on satellite imagery
     '''
     logger.info('Starting LST calculations')
 
@@ -123,12 +123,8 @@ def create_heatmap(filename,out_filename):
     # Conversion to TOA Radiance
     TOA = calc_TOA(dn)
 
-    # Step 2: Emissivity Correction
-    #returns an emissivity map from land cover
-    land_cover = gdal.Open(lc_filename)
-    lc = land_cover.ReadAsArray()
-    print("LC tif size: " + str(np.shape(lc)))
-    emissiv = get_emissivity(lc)
+    # Emissivity Correction
+    emissivity = determine_emissivity(lc)
 
     L_lambda = TOA/emissiv
 
@@ -148,25 +144,38 @@ def calc_TOA(dn):
         number (DN) data (also refered to as the Q_cal - quantized and
         calibrated standard product pixel value)
     '''
+    logger.info('Calculating TOAr')
 
     TOAr = meta_dict['RADIANCE_MULT_BAND_10'] * dn + meta_dict['RADIANCE_ADD_BAND_10']
 
     return(TOAr)
 
 
-def get_emissivity(land_cover):
+def determine_emissivity():
+    '''
+        Emissivity is determined by the land cover
+        Return
+            Emissivity array from land cover map
+    '''
+    logger.info('Determining emissivity map')
+    # import land cover
+    land_cover = gdal.Open(lc_filename)
+    # convert to array
+    land_cover = land_cover.ReadAsArray()
+    logger.info("LC tif size: " + str(np.shape(land_cover)))
     land_cover = land_cover.astype(float)
+    emissivity = land_cover.copy()
 
     #convert land_cover to emissivity array
-    land_cover[land_cover > 90] = 0.957 # Wetlands is assumed to be Sparse Vegetation
-    land_cover[(1 < land_cover) & (land_cover < 20)] = 0.989 # Water
-    land_cover[(1 < land_cover) & (land_cover < 30)] = 0.912 # Urban
-    land_cover[(1 < land_cover) & (land_cover < 40)]  = 0.896 # Barren
-    land_cover[(1 < land_cover) & (land_cover < 50)]  = 0.967 # Forest
-    land_cover[(1 < land_cover) & (land_cover < 80)]  = 0.957 # Grass
-    land_cover[(1 < land_cover) & (land_cover < 90)]  = 0.957 # Cropland
+    emissivity[land_cover > 90] = 0.957 # Wetlands is assumed to be Sparse Vegetation
+    emissivity[(1 < land_cover) & (land_cover < 20)] = 0.989 # Water
+    emissivity[(1 < land_cover) & (land_cover < 30)] = 0.912 # Urban
+    emissivity[(1 < land_cover) & (land_cover < 40)]  = 0.896 # Barren
+    emissivity[(1 < land_cover) & (land_cover < 50)]  = 0.967 # Forest
+    emissivity[(1 < land_cover) & (land_cover < 80)]  = 0.957 # Grass
+    emissivity[(1 < land_cover) & (land_cover < 90)]  = 0.957 # Cropland
 
-    return(land_cover)
+    return(emissivity)
 
 
 def step3(L_lambda):
