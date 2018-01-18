@@ -28,8 +28,8 @@ I selected the most recent four/five images per city and day/night where there w
 
   1. Website: https://earthexplorer.usgs.gov/
   2. Enter Search Criteria:
-    1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
-    2. Date Range - we want to use summer dates
+      1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
+      2. Date Range - we want to use summer dates
         I'm looking at years 2013-2017 and use months of May (05) - September (09) inclusive
         Need to find images that don't have too much cloud cover.
   3. Data Sets
