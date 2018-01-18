@@ -262,18 +262,22 @@ def calc_albedo(set1_5):
 
 
 def calc_NDVI(set1_5):
-    ''' calculate the NDVI '''
+    '''
+        calculate the NDVI
+        For landsat8 it's (B5 – B4) / (B5 + B4) - see Ben's email dated 7/26/16
+    '''
     # import bands
     landsat_band = dict()
-    i = 0
+    band_number = 1
     for name in set1_5:
         ds = gdal.Open(name)
-        landsat_band[i] = ds.ReadAsArray()
-        i += 1
+        landsat_band[band_number] = ds.ReadAsArray()
+        band_number += 1
 
-    NDVI = (landsat_band[4] - landsat_band[3])/(landsat_band[4] + landsat_band[3])
+    # calculate the NDVI
+    ndvi = (landsat_band[5] - landsat_band[4])/(landsat_band[5] + landsat_band[4])
 
-    array_to_raster(NDVI, out_filename['nvdi'], ds)
+    array_to_raster(ndvi, out_filename['nvdi'], ds)
 
 
 def array_to_raster(output, out_filename, ds):
