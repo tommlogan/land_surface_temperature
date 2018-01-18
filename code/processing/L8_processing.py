@@ -57,6 +57,14 @@ set1_5 = [b1, b2, b3, b4, b5]
 
 def main():
     '''
+        loops through satellite images and processes them
+    '''
+    #
+
+
+
+def process_image():
+    '''
         1. Reads in metadata
         2. Creates map of land surface temperature
         3. Creates map of NVDI
@@ -64,7 +72,7 @@ def main():
     '''
 
     # Create map of land surface temperature
-    create_heatmap(filename, out_filename)
+    calc_LST(filename, out_filename)
 
     # create nvdi map
     calc_NDVI(set1_5)
@@ -87,7 +95,12 @@ def read_metadata():
             Dictionary of metadata
     '''
     # list of variables needed from metadata
-    meta_variables = set(['RADIANCE_MULT_BAND_10','RADIANCE_ADD_BAND_10','K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
+    meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
+    bands = [1,2,3,4,5,10]
+    # include radiance re-scaling factors
+    for rad in ['MULT', 'ADD']:
+        for b in bands:
+            meta_variables.add('RADIANCE_{}_BAND_{}'.format(rad, b))
 
     # init dictionary
     meta_dict = dict.fromkeys(meta_variables)
@@ -115,13 +128,13 @@ def calc_LST(filename,out_filename):
     logger.info('Starting LST calculations')
 
     print("You're operating in " + os.getcwd())
-    # open the satellite imagery
+    # read in band 10 data
     ds = gdal.Open(filename)
     dn = ds.ReadAsArray()
     print("L8 tif size: " + str(np.shape(dn)))
 
     # Conversion to TOA Radiance
-    TOA = calc_TOA(dn)
+    TOA = calc_TOA(dn, meta_dict, 10)
 
     # Calculate the At-Satellite Brightness Temperature
     temp_satellite = calc_satellite_temperature(TOA)
@@ -133,7 +146,7 @@ def calc_LST(filename,out_filename):
     array_to_raster(temp_surface, out_filename['lst'], land_cover)
 
 
-def calc_TOA(dn, meta_dict):
+def calc_TOA(dn, meta_dict,band_number):
     '''
         Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band 10 digital
         number (DN) data (also refered to as the Q_cal - quantized and
@@ -141,7 +154,7 @@ def calc_TOA(dn, meta_dict):
     '''
     logger.info('Calculating TOAr')
 
-    TOAr = meta_dict['RADIANCE_MULT_BAND_10'] * dn + meta_dict['RADIANCE_ADD_BAND_10']
+    TOAr = meta_dict['RADIANCE_MULT_BAND_{}'.format(band_number)] * dn + meta_dict['RADIANCE_ADD_BAND_{}'.format(band_number)]
 
     return(TOAr)
 
@@ -219,26 +232,33 @@ def atmos_correction(T_sensor, T_0,lc):
     return temp_landsurface
 
 
-def reflectance(dn):
-    mult_band = 2.0e-5
-    add_band = -0.1
-    refl = mult_band * dn + add_band
-    return refl
+def calc_albedo(set1_5):
+    '''
+        Calculate albedo from bands 1-5
+        This is calculated using Smith's normalized Liang el al. algorithm
+        Reference:
+            Smith, R. B., 2010: The heat budget of the earth’s surface deduced from space. Tech. rep., Yale, http://www.yale.edu/ceo/Documentation/Landsat DN to Albedo.pdf.)
+            Liang, S., 2001: Narrowband to broadband conversions of land surface albedo i: Algorithms. Re-mote Sensing of Environment, 76 (2), 213 – 238, doi:http://dx.doi.org/10.1016/S0034-4257(00)00205-4, URL http://www.sciencedirect.com/science/article/pii/S0034425700002054.
+        Return
+            albedo
+    '''
+    logger.info('Calculating the albedo')
 
-
-def albedo(set1_5):
+    # calculating the reflectivity of each band
     reflect_band = dict()
-    i = 0
+    band = 1
     for name in set1_5:
         ds = gdal.Open(name)
-        reflect_band[i] = reflectance(ds.ReadAsArray())
+        dn = ds.ReadAsArray()
+        reflect_band[i] = calc_TOA(dn, meta_dict, band_number)
         i += 1
 
-    alpha = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) +
+    # calculate the albedo
+    albedo = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) +
             (0.373*reflect_band[2]) + (0.085*reflect_band[3]) +
             (0.072*reflect_band[4]) - 0.018) / 1.016
 
-    array_to_raster(alpha, out_filename['albedo'], ds)
+    array_to_raster(albedo, out_filename['albedo'], ds)
 
 
 def calc_NDVI(set1_5):

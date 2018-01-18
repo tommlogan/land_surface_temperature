@@ -19,9 +19,9 @@ Maybe will add a couple of cities from non-industrialized countries to see if th
 
 ## Steps:
 1. Process the LandSat images to land surface temperatures
+2. Statistical analysis
 
 ## 1. LandSat images to LST, albedo, and NDVI:
-
 
 #### 1.1 Download the satellite images
 I selected the most recent four/five images per city and day/night where there was no cloud cover over the city of interest.
