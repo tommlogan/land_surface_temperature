@@ -87,7 +87,7 @@ def read_metadata():
             Dictionary of metadata
     '''
     # list of variables needed from metadata
-    meta_variables = set(['RADIANCE_MULT_BAND_10','RADIANCE_ADD_BAND_10'])
+    meta_variables = set(['RADIANCE_MULT_BAND_10','RADIANCE_ADD_BAND_10','K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
 
     # init dictionary
     meta_dict = dict.fromkeys(meta_variables)
@@ -123,22 +123,17 @@ def calc_LST(filename,out_filename):
     # Conversion to TOA Radiance
     TOA = calc_TOA(dn)
 
-    # Emissivity Correction
-    emissivity = determine_emissivity(lc)
+    # Calculate the At-Satellite Brightness Temperature
+    temp_satellite = calc_satellite_temperature(TOA)
 
-    L_lambda = TOA/emissiv
+    # Atmospheric correction
+    temp_surface = atmos_correction(temp_satellite, T_0,lc)
 
-    #Next Step 3 in ppt
-    T_sensor = step3(L_lambda)
-
-    temp_surface = step4(T_sensor, T_0,lc)
-    temp_surface = celsius(temp_surface)
-    # write to  tif
-    output = temp_surface
-    array_to_raster(output, out_filename['lst'], land_cover)
+    # write to tif
+    array_to_raster(temp_surface, out_filename['lst'], land_cover)
 
 
-def calc_TOA(dn):
+def calc_TOA(dn, meta_dict):
     '''
         Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band 10 digital
         number (DN) data (also refered to as the Q_cal - quantized and
@@ -178,13 +173,34 @@ def determine_emissivity():
     return(emissivity)
 
 
-def step3(L_lambda):
+def calc_satellite_temperature(TOA, meta_dict):
+    '''
+        Calculate the At-Satellite Brightness temperature
+        First, need to calculate the emissivity from the land use
+        Then convert
+        Returns temperature in Kelvin
+    '''
+    logger.info('calculating satellite temperature')
+    # Emissivity Correction
+    emissivity = determine_emissivity(lc)
 
-    T = K_2/(np.log((K_1/L_lambda) + 1))
-    return T
+    # spectral radiance
+    L_lambda = TOA/emissiv
+
+    # calculate the satellite brightness
+    temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log((meta_dict['K1_CONSTANT_BAND_10']/L_lambda) + 1))
+    return temp_satellite
 
 
-def step4(T_sensor, T_0,lc):
+def atmos_correction(T_sensor, T_0,lc):
+    '''
+        Using the mono-window algorithm (Qin et al., 2001, International Journal of Remote Sensing)
+        make the atmospheric correction
+        Returns land surface temperature in celsius
+    '''
+    logger.info('making the atmospheric correction')
+
+    # constants for the algorithm
     a_6 = -67.355351
     b_6 = 0.458606
     w = 1.6
@@ -192,13 +208,15 @@ def step4(T_sensor, T_0,lc):
     c_6 = get_emissivity(lc) * t_6
     d_6 = (1 - t_6)*(1 + (1 - get_emissivity(lc))*t_6)
     t_a = 16.0110 + 0.92621*T_0
+
+    # mono-window algorithm
     T = a_6*(1 - c_6 - d_6) + (b_6*(1 - c_6 - d_6) + c_6 + d_6)*T_sensor - d_6*t_a
-    T = T/c_6
-    return T
+    temp_landsurface = T/c_6
 
+    # converting to celsius
+    temp_landsurface = temp_landsurface - 273.15
 
-def celsius(T):
-    return (T-273.15)
+    return temp_landsurface
 
 
 def reflectance(dn):
