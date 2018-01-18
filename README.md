@@ -28,22 +28,22 @@ I selected the most recent four/five images per city and day/night where there w
 
   1. Website: https://earthexplorer.usgs.gov/
   2. Enter Search Criteria:
-    1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
-    2. Date Range - we want to use summer dates
+      1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
+      2. Date Range - we want to use summer dates
         I'm looking at years 2013-2017 and use months of May (05) - September (09) inclusive
         Need to find images that don't have too much cloud cover.
   3. Data Sets
-    1. Select Landsat -> Landsat Collection 1 Level-1 -> Landsat 8 OLI/TIRS C1 Level-1
+      1. Select Landsat -> Landsat Collection 1 Level-1 -> Landsat 8 OLI/TIRS C1 Level-1
   4. Additional Criteria
-    1. Sensor Identifier: OLI_TIRS
-    2. Data type level-1: All
-    3. Day/Night Indicator: Select relevant
-    4. Cloud Cover: I leave these blank because I care about the cloud cover of the city, rather than the image and it's possible to have an image with high cloud cover but a clear sky above the city.
+      1. Sensor Identifier: OLI_TIRS
+      2. Data type level-1: All
+      3. Day/Night Indicator: Select relevant
+      4. Cloud Cover: I leave these blank because I care about the cloud cover of the city, rather than the image and it's possible to have an image with high cloud cover but a clear sky above the city.
   5. View each image in turn and select ones with low cloud cover of the city
 
-    When an image is selected
-    * downloaded the Level-1 GeoTIFF Data Product
-    * added to the `data/raw` directory
+      When an image is selected
+      * downloaded the Level-1 GeoTIFF Data Product
+      * added to the `data/raw` directory
 
 #### 1.2 Metadata
   `metadata.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed.
