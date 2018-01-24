@@ -25,18 +25,23 @@ Notes:
 
 from PIL import Image
 import numpy as np
+import pandas as pd
 from osgeo import gdal
 from osgeo import gdal_array
 from osgeo import osr
+import shapefile
+from matplotlib import pyplot as plt
+from rpy2.robjects.packages import importr
+import subprocess
 import os
+os.chdir('F:/UrbanDataProject/land_surface_temperature')
 
 # init logging
 import sys
-sys.path.append("..")
+sys.path.append("code")
 from logger_config import *
 logger = logging.getLogger(__name__)
 
-os.chdir('F:/UrbanDataProject/land_surface_temperature/data/cities/losangeles/2016-06-22 LC80410362016174LGN00')
 
 city = 'la'
 file_code = 'LC80410362016174LGN00'
@@ -59,20 +64,28 @@ def main():
     '''
         loops through satellite images and processes them
     '''
-    #
+    # Read the source csv with the satellite id numbers of the
+    source_satellite = pd.read_csv('data/data_source_satellite.csv')
+    info_satellite = source_satellite.iloc[0]
+    # loop rows
+    for index, info_satellite in source_satellite.iterrows():
+        # process the image
+        logger.info('Processing image {}'.format(info_satellite['landsat_product_id']))
+        process_image(info_satellite)
 
 
-
-def process_image():
+def process_image(info_satellite):
     '''
         1. Reads in metadata
         2. Creates map of land surface temperature
         3. Creates map of NVDI
         4. Creates map of albedo
     '''
+    # read metadata
+    meta_dict = read_metadata(info_satellite)
 
     # Create map of land surface temperature
-    calc_LST(filename, out_filename)
+    calc_LST(info_satellite, meta_dict)
 
     # create nvdi map
     calc_NDVI(set1_5)
@@ -80,20 +93,16 @@ def process_image():
     # create map of albedo
     albedo(set1_5)
 
-def read_image_list():
-    '''
-        Loop through the satellite image list
-        Return:
-            Satellite id
-            Temperature (unit?)
-    '''
 
-def read_metadata():
+def read_metadata(info_satellite):
     '''
         For the image read the metadata txt file
         Return
             Dictionary of metadata
     '''
+    # metadata file and location
+    fn_metadata = 'data/raw/{}/{}_MTL.txt'.format(info_satellite['city'],info_satellite['landsat_product_id'])
+
     # list of variables needed from metadata
     meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
     bands = [1,2,3,4,5,10]
@@ -105,8 +114,7 @@ def read_metadata():
     # init dictionary
     meta_dict = dict.fromkeys(meta_variables)
     # open the metadata file
-    metadata_fn = 'LC08_L1TP_015033_20170907_20170926_01_T1_MTL.txt'
-    with open(metadata_fn,'r') as fid:
+    with open(fn_metadata,'r') as fid:
         # loop lines in text file
         for line in fid:
             # divide line into words, split by space
@@ -121,23 +129,32 @@ def read_metadata():
 
     return meta_dict
 
-def calc_LST(filename,out_filename):
+
+def calc_LST(info_satellite, meta_dict):
     '''
         Returns the land surface temperature (LST) based on satellite imagery
     '''
     logger.info('Starting LST calculations')
 
-    print("You're operating in " + os.getcwd())
+    # metadata file and location
+    fn_b10 = 'data/raw/{}/{}_B10.tif'.format(info_satellite['city'],info_satellite['landsat_product_id'])
+
+    # read images and prepare for calculations
+
     # read in band 10 data
-    ds = gdal.Open(filename)
-    dn = ds.ReadAsArray()
-    print("L8 tif size: " + str(np.shape(dn)))
+    image_b10 = gdal.Open(fn_b10)
+    dn = image_b10.ReadAsArray()
+
+    # print("L8 tif size: " + str(np.shape(dn)))
 
     # Conversion to TOA Radiance
     TOA = calc_TOA(dn, meta_dict, 10)
 
+    # Emissivity Correction
+    emissivity = determine_emissivity(info_satellite, dn)
+
     # Calculate the At-Satellite Brightness Temperature
-    temp_satellite = calc_satellite_temperature(TOA)
+    temp_satellite = calc_satellite_temperature(TOA, meta_dict, emissivity)
 
     # Atmospheric correction
     temp_surface = atmos_correction(temp_satellite, T_0,lc)
@@ -146,7 +163,71 @@ def calc_LST(filename,out_filename):
     array_to_raster(temp_surface, out_filename['lst'], land_cover)
 
 
-def calc_TOA(dn, meta_dict,band_number):
+def read_geographic_data(info_satellite):
+    '''
+        Run R code which reads in the satellite and land cover images, crop to the city boundary
+        Then read in the results
+        Return
+            satellite image
+            land cover
+    '''
+    # Define command
+    command = 'Rscript'
+    path2script = 'code/processing/clip_geographic_data.R'
+
+    # Define arguments
+    city = info_satellite['city']
+    landsat_product_id = info_satellite['landsat_product_id']
+    fn_land_cover = source_city['land_cover'][city_idx].values[0]
+    fn_boundary = source_city['city_parcels'][city_idx].values[0]
+    args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary]
+
+    # Build subprocess command
+    cmd = [command, path2script] + args_clip
+
+    # run the R function to clip and project the data as required
+    x = subprocess.check_output(cmd, universal_newlines=True)
+
+
+    # import source file
+    source_city = pd.read_csv('data/data_source_city.csv')
+
+    # filename for satellite image
+    fn_b10 = 'data/raw/{}/{}_B10.tif'.format(info_satellite['city'],info_satellite['landsat_product_id'])
+
+    # filename for land cover
+    city_idx = source_city.loc[source_city['city']==city].index
+    fn_land_cover = source_city['land_cover'][city_idx].values[0]
+    fn_land_cover = 'data/raw/{}/{}/{}.tif'.format(city, fn_land_cover, fn_land_cover)
+
+    # filename for boundary
+    fn_boundary = source_city['city_parcels'][city_idx].values[0]
+    # fn_boundary = 'data/raw/{}/{}/{}.shp'.format(city, fn_boundary, fn_boundary)
+
+
+    # import R functions
+    import rpy2.robjects as ro
+    rgdal = importr('rgdal')
+
+    # import boundary
+    city_boundary = rgdal.readOGR(dsn = 'data/raw/{}/{}'.format(city,fn_boundary), layer = fn_boundary)
+    city_boundary <- gUnaryUnion(city_boundary)
+    # read in band 10 data
+    image_b10 = gdal.Open(fn_b10)
+
+    # import land cover
+    land_cover = gdal.Open(fn_land_cover)
+
+
+
+
+
+
+    dn = image_b10.ReadAsArray()
+
+
+
+def calc_TOA(dn, meta_dict, band_number):
     '''
         Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band 10 digital
         number (DN) data (also refered to as the Q_cal - quantized and
@@ -159,15 +240,14 @@ def calc_TOA(dn, meta_dict,band_number):
     return(TOAr)
 
 
-def determine_emissivity():
+def determine_emissivity(info_satellite, dn):
     '''
         Emissivity is determined by the land cover
         Return
             Emissivity array from land cover map
     '''
     logger.info('Determining emissivity map')
-    # import land cover
-    land_cover = gdal.Open(lc_filename)
+
     # convert to array
     land_cover = land_cover.ReadAsArray()
     logger.info("LC tif size: " + str(np.shape(land_cover)))
@@ -194,18 +274,16 @@ def calc_satellite_temperature(TOA, meta_dict):
         Returns temperature in Kelvin
     '''
     logger.info('calculating satellite temperature')
-    # Emissivity Correction
-    emissivity = determine_emissivity(lc)
 
     # spectral radiance
-    L_lambda = TOA/emissiv
+    L_lambda = TOA/emissivity
 
     # calculate the satellite brightness
     temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log((meta_dict['K1_CONSTANT_BAND_10']/L_lambda) + 1))
     return temp_satellite
 
 
-def atmos_correction(T_sensor, T_0,lc):
+def atmos_correction(T_sensor, T_0, emissivity):
     '''
         Using the mono-window algorithm (Qin et al., 2001, International Journal of Remote Sensing)
         make the atmospheric correction
@@ -218,8 +296,9 @@ def atmos_correction(T_sensor, T_0,lc):
     b_6 = 0.458606
     w = 1.6
     t_6 = 0.974290 - 0.08007*w
-    c_6 = get_emissivity(lc) * t_6
-    d_6 = (1 - t_6)*(1 + (1 - get_emissivity(lc))*t_6)
+    # variables dependent on land cover (emissivity) and temperature
+    c_6 = emissivity * t_6
+    d_6 = (1 - t_6)*(1 + (1 - emissivity)*t_6)
     t_a = 16.0110 + 0.92621*T_0
 
     # mono-window algorithm

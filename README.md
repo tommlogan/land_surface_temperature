@@ -16,6 +16,7 @@ Maybe will add a couple of cities from non-industrialized countries to see if th
 * [ ] Accra, Ghana (acr) - I'm not sure if the sat images are clear enough
 * [ ] Kolkata, India (kol)
 * [ ] Manila, Philippines (man)
+* [ ] Nairobi, Kenya (nai)
 
 ## Steps:
 1. Process the LandSat images to land surface temperatures
@@ -43,16 +44,22 @@ I selected the most recent four/five images per city and day/night where there w
 
       When an image is selected
       * downloaded the Level-1 GeoTIFF Data Product
-      * added to the `data/raw` directory
+      * added to the `data/raw/<city>` directory
+  6. Land Cover (NLCD) data for 2011 was downloaded using https://viewer.nationalmap.gov and the state the city is in was downloaded.
+  7. Impervious surface and tree canopy was downloaded from https://viewer.nationalmap.gov as well.
+  8. The shapefile of the city was downloaded from [catalog.data.gov](https://catalog.data.gov/dataset?collection_package_id=89f89c6f-741c-4121-98e3-d3f1f528ff53) dataset of city boundaries
 
 #### 1.2 Metadata
-  `metadata.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed.
+  `data_source_satellite.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed. <br>
+  `data_source_city.csv` in `/data` records the location of city specific data such as the land cover and tree canopy
   1. As data is downloaded, add it to the csv
-  2. The maximum daily temperature (in `UNITS?`) for the day needs to be retrieved from...
+  2. The maximum daily temperature (in Celsius) for the day needs to be retrieved from https://www.wunderground.com/history/?MR=1
 
 #### 1.3 Process satellite images to LST, albedo, NDVI
 This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad, H. (2016). Analyzing land surface temperature distribution ... *Modeling Earth Systems and Environment.*](https://www.researchgate.net/publication/301797360_Analyzing_land_surface_temperature_distribution_in_response_to_land_useland_cover_change_using_split_window_algorithm_and_spectral_radiance_model_in_Sundarban_Biosphere_Reserve_India)
-  1. df
+  1. The code `L8_processing.py` takes the raw satellite images and land cover images and calculates the surface temperature, albedo, and ndvi.
+  2. In doing so, `L8_processing.py` calls the function `clip_geographic_data.R` which is an R function that takes the raw images and clips them to the city size. The output of this is satellite and land cover images which are the clipped to the city limit (with 2km buffer). These are saved in `data/processed/<city>`.
+  3. The final images are saved in `XXX`
 
 #### 1.4 Calculate average of LST, albedo, NDVI
   1. df
