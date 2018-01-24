@@ -65,16 +65,17 @@ def main():
         loops through satellite images and processes them
     '''
     # Read the source csv with the satellite id numbers of the
+    source_city = pd.read_csv('data/data_source_city.csv')
     source_satellite = pd.read_csv('data/data_source_satellite.csv')
     info_satellite = source_satellite.iloc[0]
     # loop rows
     for index, info_satellite in source_satellite.iterrows():
         # process the image
         logger.info('Processing image {}'.format(info_satellite['landsat_product_id']))
-        process_image(info_satellite)
+        process_image(info_satellite, source_city)
 
 
-def process_image(info_satellite):
+def process_image(info_satellite, source_city):
     '''
         1. Reads in metadata
         2. Creates map of land surface temperature
@@ -84,14 +85,17 @@ def process_image(info_satellite):
     # read metadata
     meta_dict = read_metadata(info_satellite)
 
-    # Create map of land surface temperature
-    calc_LST(info_satellite, meta_dict)
+    # clip the images to the city and ensure they are same projection
+    clip_geographic_data(info_satellite, source_city)
+
+    # create map of land surface temperature
+    calc_LST(info_satellite, meta_dict, source_city)
 
     # create nvdi map
-    calc_NDVI(set1_5)
+    calc_NDVI(info_satellite)
 
     # create map of albedo
-    albedo(set1_5)
+    albedo(info_satellite)
 
 
 def read_metadata(info_satellite):
@@ -130,45 +134,13 @@ def read_metadata(info_satellite):
     return meta_dict
 
 
-def calc_LST(info_satellite, meta_dict):
+def clip_geographic_data(info_satellite, source_city):
     '''
-        Returns the land surface temperature (LST) based on satellite imagery
-    '''
-    logger.info('Starting LST calculations')
-
-    # metadata file and location
-    fn_b10 = 'data/raw/{}/{}_B10.tif'.format(info_satellite['city'],info_satellite['landsat_product_id'])
-
-    # read images and prepare for calculations
-
-    # read in band 10 data
-    image_b10 = gdal.Open(fn_b10)
-    dn = image_b10.ReadAsArray()
-
-    # print("L8 tif size: " + str(np.shape(dn)))
-
-    # Conversion to TOA Radiance
-    TOA = calc_TOA(dn, meta_dict, 10)
-
-    # Emissivity Correction
-    emissivity = determine_emissivity(info_satellite, dn)
-
-    # Calculate the At-Satellite Brightness Temperature
-    temp_satellite = calc_satellite_temperature(TOA, meta_dict, emissivity)
-
-    # Atmospheric correction
-    temp_surface = atmos_correction(temp_satellite, T_0,lc)
-
-    # write to tif
-    array_to_raster(temp_surface, out_filename['lst'], land_cover)
-
-
-def read_geographic_data(info_satellite):
-    '''
-        Run R code which reads in the satellite and land cover images, crop to the city boundary
-        Then read in the results
+        Run R code which clips in the satellite and land cover images to the city boundary
+        and projects to WGS84
         Return
-            satellite image
+            images saved in /data/intermediate
+            satellite
             land cover
     '''
     # Define command
@@ -177,10 +149,14 @@ def read_geographic_data(info_satellite):
 
     # Define arguments
     city = info_satellite['city']
+    city_idx = source_city.loc[source_city['city']==city].index
+    # filename arguments
     landsat_product_id = info_satellite['landsat_product_id']
     fn_land_cover = source_city['land_cover'][city_idx].values[0]
     fn_boundary = source_city['city_parcels'][city_idx].values[0]
-    args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary]
+    bands = [1,2,3,4,5,10]
+    # args into list
+    args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands]
 
     # Build subprocess command
     cmd = [command, path2script] + args_clip
@@ -189,42 +165,35 @@ def read_geographic_data(info_satellite):
     x = subprocess.check_output(cmd, universal_newlines=True)
 
 
-    # import source file
-    source_city = pd.read_csv('data/data_source_city.csv')
+def calc_LST(info_satellite, meta_dict, source_city):
+    '''
+        Returns the land surface temperature (LST) based on satellite imagery
+    '''
+    logger.info('Starting LST calculations')
 
-    # filename for satellite image
-    fn_b10 = 'data/raw/{}/{}_B10.tif'.format(info_satellite['city'],info_satellite['landsat_product_id'])
+    # metadata file and location
+    city = info_satellite['city']
+    fn_b10 = 'data/intermediate/{}/{}_B10.tif'.format(city, info_satellite['landsat_product_id'])
 
-    # filename for land cover
-    city_idx = source_city.loc[source_city['city']==city].index
-    fn_land_cover = source_city['land_cover'][city_idx].values[0]
-    fn_land_cover = 'data/raw/{}/{}/{}.tif'.format(city, fn_land_cover, fn_land_cover)
-
-    # filename for boundary
-    fn_boundary = source_city['city_parcels'][city_idx].values[0]
-    # fn_boundary = 'data/raw/{}/{}/{}.shp'.format(city, fn_boundary, fn_boundary)
-
-
-    # import R functions
-    import rpy2.robjects as ro
-    rgdal = importr('rgdal')
-
-    # import boundary
-    city_boundary = rgdal.readOGR(dsn = 'data/raw/{}/{}'.format(city,fn_boundary), layer = fn_boundary)
-    city_boundary <- gUnaryUnion(city_boundary)
     # read in band 10 data
     image_b10 = gdal.Open(fn_b10)
-
-    # import land cover
-    land_cover = gdal.Open(fn_land_cover)
-
-
-
-
-
-
     dn = image_b10.ReadAsArray()
 
+    # conversion to TOA radiance
+    TOA = calc_TOA(dn, meta_dict, 10)
+
+    # emissivity correction
+    emissivity = determine_emissivity(info_satellite, dn, source_city)
+
+    # calculate the at-satellite brightness temperature
+    temp_satellite = calc_satellite_temperature(TOA, meta_dict, emissivity)
+
+    # atmospheric correction
+    temp_surface = atmos_correction(temp_satellite, info_satellite, emissivity)
+
+    # write to tif
+    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'lst', info_satellite['date'])
+    array_to_raster(temp_surface, fn_out, fn_b10)
 
 
 def calc_TOA(dn, meta_dict, band_number):
@@ -240,13 +209,18 @@ def calc_TOA(dn, meta_dict, band_number):
     return(TOAr)
 
 
-def determine_emissivity(info_satellite, dn):
+def determine_emissivity(info_satellite, dn, city, source_city):
     '''
         Emissivity is determined by the land cover
         Return
             Emissivity array from land cover map
     '''
     logger.info('Determining emissivity map')
+
+    # filename for land cover
+    city_idx = source_city.loc[source_city['city']==city].index
+    fn_land_cover = source_city['land_cover'][city_idx].values[0]
+    fn_land_cover = 'data/intermediate/{}/{}.tif'.format(city, fn_land_cover, fn_land_cover)
 
     # convert to array
     land_cover = land_cover.ReadAsArray()
@@ -280,16 +254,20 @@ def calc_satellite_temperature(TOA, meta_dict):
 
     # calculate the satellite brightness
     temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log((meta_dict['K1_CONSTANT_BAND_10']/L_lambda) + 1))
+
     return temp_satellite
 
 
-def atmos_correction(T_sensor, T_0, emissivity):
+def atmos_correction(temp_satellite, info_satellite, emissivity):
     '''
         Using the mono-window algorithm (Qin et al., 2001, International Journal of Remote Sensing)
         make the atmospheric correction
         Returns land surface temperature in celsius
     '''
     logger.info('making the atmospheric correction')
+
+    # temparature from csv file
+    temp_max = info_satellite['max_temp_celsius']
 
     # constants for the algorithm
     a_6 = -67.355351
@@ -299,10 +277,10 @@ def atmos_correction(T_sensor, T_0, emissivity):
     # variables dependent on land cover (emissivity) and temperature
     c_6 = emissivity * t_6
     d_6 = (1 - t_6)*(1 + (1 - emissivity)*t_6)
-    t_a = 16.0110 + 0.92621*T_0
+    t_a = 16.0110 + 0.92621*temp_max
 
     # mono-window algorithm
-    T = a_6*(1 - c_6 - d_6) + (b_6*(1 - c_6 - d_6) + c_6 + d_6)*T_sensor - d_6*t_a
+    T = a_6*(1 - c_6 - d_6) + (b_6*(1 - c_6 - d_6) + c_6 + d_6)*temp_satellite - d_6*t_a
     temp_landsurface = T/c_6
 
     # converting to celsius
@@ -311,7 +289,7 @@ def atmos_correction(T_sensor, T_0, emissivity):
     return temp_landsurface
 
 
-def calc_albedo(set1_5):
+def calc_albedo(info_satellite):
     '''
         Calculate albedo from bands 1-5
         This is calculated using Smith's normalized Liang el al. algorithm
@@ -322,59 +300,62 @@ def calc_albedo(set1_5):
             albedo
     '''
     logger.info('Calculating the albedo')
+    fn_b10 =
+
+    # read in band 10 data
+    image_b10 = gdal.Open(fn_b10)
+    dn = image_b10.ReadAsArray()
 
     # calculating the reflectivity of each band
     reflect_band = dict()
     band = 1
-    for name in set1_5:
-        ds = gdal.Open(name)
+    for band in [1,2,3,4,5]:
+        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(city, info_satellite['landsat_product_id'], band)
+        ds = gdal.Open(fn_sat)
         dn = ds.ReadAsArray()
-        reflect_band[i] = calc_TOA(dn, meta_dict, band_number)
-        i += 1
+        reflect_band[band] = calc_TOA(dn, meta_dict, band)
 
     # calculate the albedo
     albedo = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) +
             (0.373*reflect_band[2]) + (0.085*reflect_band[3]) +
             (0.072*reflect_band[4]) - 0.018) / 1.016
 
-    array_to_raster(albedo, out_filename['albedo'], ds)
+    # save
+    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'albedo', info_satellite['date'])
+    array_to_raster(albedo, fn_out, ds)
 
 
-def calc_NDVI(set1_5):
+def calc_NDVI(info_satellite):
     '''
         calculate the NDVI
         For landsat8 it's (B5 – B4) / (B5 + B4) - see Ben's email dated 7/26/16
     '''
     # import bands
     landsat_band = dict()
-    band_number = 1
-    for name in set1_5:
-        ds = gdal.Open(name)
-        landsat_band[band_number] = ds.ReadAsArray()
-        band_number += 1
+    band = 1
+    for band in [1,2,3,4,5]:
+        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(city, info_satellite['landsat_product_id'], band)
+        ds = gdal.Open(fn_sat)
+        landsat_band[band] = ds.ReadAsArray()
 
     # calculate the NDVI
     ndvi = (landsat_band[5] - landsat_band[4])/(landsat_band[5] + landsat_band[4])
 
-    array_to_raster(ndvi, out_filename['nvdi'], ds)
+    # save NVDI
+    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'ndvi', info_satellite['date'])
+    array_to_raster(ndvi, fn_out, ds)
 
 
 def array_to_raster(output, out_filename, ds):
-    """Array > Raster
-    Save a raster from a C order array.
+    '''
+        Convert the array back to a raster
+        Save the raster
+    '''
+    logger.info('Calculating the albedo')
 
-    :param array: ndarray
-    """
-    # np.savetxt("foo.csv", output, delimiter=",")
-    print(output.shape)
-
-
-    # You need to get those values like you did.
+    # identify the number of pixels
     x_pixels = output.shape[1]
-    # assert x_pixels == ds.RasterXSize  # number of pixels in x
     y_pixels = output.shape[0]
-    # assert y_pixels == ds.RasterYSize  # number of pixels in y
-    print(x_pixels,y_pixels)
 
     # create the output image
     driver = gdal.GetDriverByName('GTiff')
@@ -388,12 +369,12 @@ def array_to_raster(output, out_filename, ds):
 
     # write the data
     dataset.GetRasterBand(1).WriteArray(output)
-    dataset.FlushCache()  # Write to disk.
+    # Write to disk
+    dataset.FlushCache()
 
     # georeference the image and set the projection
     dataset.SetGeoTransform(ds.GetGeoTransform())
     dataset.SetProjection(ds.GetProjection())
-
 
 
 if __name__ == '__main__':

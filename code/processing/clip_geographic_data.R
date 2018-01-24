@@ -17,14 +17,18 @@ library(raster)
 library(rgeos)
 
 
-main <- function(city, landsat_id, fn_land_cover, fn_city_boundary){
+main <- function(city, landsat_id, fn_land_cover, fn_city_boundary, bands){
   # reads in the arguments passed
   
   # import city boundary
   city.buffer <- read_city_boundary(city, fn_city_boundary)
   
   # import satellite image and clip to city buffer
-  satellite.city <- clip_satellite(city.buffer, landsat_id)
+  bands <- as.numeric(bands)
+  for (band in bands){
+    # loop through the bands
+    satellite.city <- clip_satellite(city.buffer, landsat_id, band)
+  }
   
   # import land cover image and clip to city buffer
   landcover.city <- clip_land_cover(city.buffer, fn_land_cover, satellite.city)
@@ -34,7 +38,7 @@ main <- function(city, landsat_id, fn_land_cover, fn_city_boundary){
 read_city_boundary <- function(city, fn_city_boundary){
   # import the city boundary polygon, buffer it, and save it
   
-  path.city <- file.path('data','processed',city)
+  path.city <- file.path('data','intermediate',city)
   name.boundary <-paste0(city, '_boundary')
   name.buffer <- paste0(city, '_buffer')
   
@@ -71,10 +75,10 @@ read_city_boundary <- function(city, fn_city_boundary){
 }
 
 
-clip_satellite <- function(city.buffer, landsat_id){
+clip_satellite <- function(city.buffer, landsat_id, band){
   # import the satellite image, clip it to the city, and save it
   print('importing satellite image')
-  path.satellite <- file.path('data','processed', city, paste0(landsat_id, '_B10.tif'))
+  path.satellite <- file.path('data','intermediate', city, paste0(landsat_id, '_B', band, '.tif'))
   
   # check if processed already
   alreadyProcessed = file.exists(path.satellite)
@@ -84,7 +88,7 @@ clip_satellite <- function(city.buffer, landsat_id){
   } else {
     # import the raw image
     print('import')
-    satellite.all <- raster(file.path('data','raw',city,paste0(landsat_id, '_B10.tif')))
+    satellite.all <- raster(file.path('data','raw',city,paste0(landsat_id, '_B', band, '.tif')))
     
 
     # change projection of city 
@@ -111,7 +115,7 @@ clip_satellite <- function(city.buffer, landsat_id){
 clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
   # import the land cover image, clip it to the city, and save it
   print('importing land cover')
-  path.landcover <- file.path('data','processed',city, paste0('NLDC2011_LC_', city, '.tif'))
+  path.landcover <- file.path('data','intermediate',city, paste0('NLDC2011_LC_', city, '.tif'))
   
   # check if processed already
   alreadyProcessed = file.exists(path.landcover)
@@ -147,18 +151,19 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
 }
 
 # Fetch command line arguments
-# args.passed <- commandArgs(trailingOnly = TRUE)
-# # inputs
-# city <- args.passed[1]
-# landsat_id <- args.passed[2]
-# fn_land_cover <- args.passed[3]
-# fn_city_boundary <- args.passed[4]
+args.passed <- commandArgs(trailingOnly = TRUE)
+# inputs
+city <- args.passed[1]
+landsat_id <- args.passed[2]
+fn_land_cover <- args.passed[3]
+fn_city_boundary <- args.passed[4]
+bands <- args.passed[5]
 # # temporary - during writing
-city <- 'bal'
-fn_city_boundary <- 'tl_2012_24510_faces'
-fn_land_cover <- 'NLCD2011_LC_Maryland'
-landsat_id <- 'LC08_L1TP_015033_20170907_20170926_01_T1'
+# city <- 'bal'
+# fn_city_boundary <- 'tl_2012_24510_faces'
+# fn_land_cover <- 'NLCD2011_LC_Maryland'
+# landsat_id <- 'LC08_L1TP_015033_20170907_20170926_01_T1'
 
 # run main
-main(city, landsat_id, fn_land_cover, fn_city_boundary)
+main(city, landsat_id, fn_land_cover, fn_city_boundary, bands)
 

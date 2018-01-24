@@ -7,5 +7,9 @@ bayesnet
 data
 maps
 **/_scratch
-.Rproj.user
-figs
+*.Rproj
+figs/exploratory
+*.log
+*.lnk
+*.html
+*.Rproj.user
