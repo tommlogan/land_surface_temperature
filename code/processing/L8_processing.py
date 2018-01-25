@@ -42,24 +42,6 @@ sys.path.append("code")
 from logger_config import *
 logger = logging.getLogger(__name__)
 
-
-city = 'la'
-file_code = 'LC80410362016174LGN00'
-T_0 = 302.039 #max temp. observed in city (https://www.wunderground.com/history/?MR=1)
-M_L = 3.342e-4 # Band-10 specific multiplicative rescaling factor from the metadata
-A_L = 0.10000 # Band-10 specific additive rescaling factor from the metadata
-K_1 = 774.8853 # Band-specific thermal conversion constant from the metadata
-K_2 =  1321.0789 # Band-specific thermal conversion constant from the metadata
-filename = file_code + '_B10_proj.tif'
-out_filename = {'lst' : city + '_LST.tif', 'nvdi' : city + '_NVDI.tif', 'albedo' : city + '_albedo.tif'}
-lc_filename = city + '_LC.tif'
-b1 = file_code + '_B1.tif'
-b2 = file_code + '_B2.tif'
-b3 = file_code + '_B3.tif'
-b4 = file_code + '_B4.tif'
-b5 = file_code + '_B5.tif'
-set1_5 = [b1, b2, b3, b4, b5]
-
 def main():
     '''
         loops through satellite images and processes them
@@ -95,7 +77,7 @@ def process_image(info_satellite, source_city):
     calc_NDVI(info_satellite)
 
     # create map of albedo
-    albedo(info_satellite)
+    calc_albedo(info_satellite, meta_dict)
 
 
 def read_metadata(info_satellite):
@@ -104,6 +86,7 @@ def read_metadata(info_satellite):
         Return
             Dictionary of metadata
     '''
+    logger.info('Reading metadata')
     # metadata file and location
     fn_metadata = 'data/raw/{}/{}_MTL.txt'.format(info_satellite['city'],info_satellite['landsat_product_id'])
 
@@ -143,6 +126,7 @@ def clip_geographic_data(info_satellite, source_city):
             satellite
             land cover
     '''
+    logger.info('Clipping geographic data if necessary')
     # Define command
     command = 'Rscript'
     path2script = 'code/processing/clip_geographic_data.R'
@@ -154,7 +138,7 @@ def clip_geographic_data(info_satellite, source_city):
     landsat_product_id = info_satellite['landsat_product_id']
     fn_land_cover = source_city['land_cover'][city_idx].values[0]
     fn_boundary = source_city['city_parcels'][city_idx].values[0]
-    bands = [1,2,3,4,5,10]
+    bands = '1,2,3,4,5,10'
     # args into list
     args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands]
 
@@ -173,7 +157,7 @@ def calc_LST(info_satellite, meta_dict, source_city):
 
     # metadata file and location
     city = info_satellite['city']
-    fn_b10 = 'data/intermediate/{}/{}_B10.tif'.format(city, info_satellite['landsat_product_id'])
+    fn_b10 = 'data/intermediate/{}/{}_B10.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'])
 
     # read in band 10 data
     image_b10 = gdal.Open(fn_b10)
@@ -193,7 +177,7 @@ def calc_LST(info_satellite, meta_dict, source_city):
 
     # write to tif
     fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'lst', info_satellite['date'])
-    array_to_raster(temp_surface, fn_out, fn_b10)
+    array_to_raster(temp_surface, fn_out, image_b10)
 
 
 def calc_TOA(dn, meta_dict, band_number):
@@ -209,7 +193,7 @@ def calc_TOA(dn, meta_dict, band_number):
     return(TOAr)
 
 
-def determine_emissivity(info_satellite, dn, city, source_city):
+def determine_emissivity(info_satellite, dn, source_city):
     '''
         Emissivity is determined by the land cover
         Return
@@ -217,10 +201,17 @@ def determine_emissivity(info_satellite, dn, city, source_city):
     '''
     logger.info('Determining emissivity map')
 
+    city = info_satellite['city']
+
     # filename for land cover
-    city_idx = source_city.loc[source_city['city']==city].index
-    fn_land_cover = source_city['land_cover'][city_idx].values[0]
-    fn_land_cover = 'data/intermediate/{}/{}.tif'.format(city, fn_land_cover, fn_land_cover)
+    city_idx = source_city.loc[source_city['city']==info_satellite['city']].index
+    landcover_id = source_city['land_cover'][city_idx].values[0]
+    fn_landcover = '_'.join(landcover_id.split('_',2)[:2] + [city])
+    fn_land_cover = 'data/intermediate/{}/{}.tif'.format(city, fn_landcover)
+    print(fn_land_cover)
+
+    # import
+    land_cover = gdal.Open(fn_land_cover)
 
     # convert to array
     land_cover = land_cover.ReadAsArray()
@@ -240,7 +231,7 @@ def determine_emissivity(info_satellite, dn, city, source_city):
     return(emissivity)
 
 
-def calc_satellite_temperature(TOA, meta_dict):
+def calc_satellite_temperature(TOA, meta_dict, emissivity):
     '''
         Calculate the At-Satellite Brightness temperature
         First, need to calculate the emissivity from the land use
@@ -248,7 +239,8 @@ def calc_satellite_temperature(TOA, meta_dict):
         Returns temperature in Kelvin
     '''
     logger.info('calculating satellite temperature')
-
+    # import code
+    # code.interact(local = locals())
     # spectral radiance
     L_lambda = TOA/emissivity
 
@@ -289,7 +281,7 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
     return temp_landsurface
 
 
-def calc_albedo(info_satellite):
+def calc_albedo(info_satellite, meta_dict):
     '''
         Calculate albedo from bands 1-5
         This is calculated using Smith's normalized Liang el al. algorithm
@@ -300,28 +292,23 @@ def calc_albedo(info_satellite):
             albedo
     '''
     logger.info('Calculating the albedo')
-    fn_b10 =
-
-    # read in band 10 data
-    image_b10 = gdal.Open(fn_b10)
-    dn = image_b10.ReadAsArray()
 
     # calculating the reflectivity of each band
     reflect_band = dict()
     band = 1
     for band in [1,2,3,4,5]:
-        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(city, info_satellite['landsat_product_id'], band)
+        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
         dn = ds.ReadAsArray()
         reflect_band[band] = calc_TOA(dn, meta_dict, band)
 
     # calculate the albedo
-    albedo = ((0.356*reflect_band[0]) + (0.130*reflect_band[1]) +
-            (0.373*reflect_band[2]) + (0.085*reflect_band[3]) +
-            (0.072*reflect_band[4]) - 0.018) / 1.016
+    albedo = ((0.356*reflect_band[1]) + (0.130*reflect_band[2]) +
+            (0.373*reflect_band[3]) + (0.085*reflect_band[4]) +
+            (0.072*reflect_band[5]) - 0.018) / 1.016
 
     # save
-    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'albedo', info_satellite['date'])
+    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(info_satellite['city'], 'albedo', info_satellite['date'])
     array_to_raster(albedo, fn_out, ds)
 
 
@@ -334,7 +321,7 @@ def calc_NDVI(info_satellite):
     landsat_band = dict()
     band = 1
     for band in [1,2,3,4,5]:
-        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(city, info_satellite['landsat_product_id'], band)
+        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
         landsat_band[band] = ds.ReadAsArray()
 
@@ -342,7 +329,7 @@ def calc_NDVI(info_satellite):
     ndvi = (landsat_band[5] - landsat_band[4])/(landsat_band[5] + landsat_band[4])
 
     # save NVDI
-    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'ndvi', info_satellite['date'])
+    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(info_satellite['city'], 'ndvi', info_satellite['date'])
     array_to_raster(ndvi, fn_out, ds)
 
 

@@ -13,3 +13,4 @@ figs/exploratory
 *.lnk
 *.html
 *.Rproj.user
+.Rproj.user

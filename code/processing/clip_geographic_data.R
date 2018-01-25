@@ -24,7 +24,7 @@ main <- function(city, landsat_id, fn_land_cover, fn_city_boundary, bands){
   city.buffer <- read_city_boundary(city, fn_city_boundary)
   
   # import satellite image and clip to city buffer
-  bands <- as.numeric(bands)
+  bands <- as.list(strsplit(bands,',')[[1]])
   for (band in bands){
     # loop through the bands
     satellite.city <- clip_satellite(city.buffer, landsat_id, band)
@@ -115,35 +115,43 @@ clip_satellite <- function(city.buffer, landsat_id, band){
 clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
   # import the land cover image, clip it to the city, and save it
   print('importing land cover')
-  path.landcover <- file.path('data','intermediate',city, paste0('NLDC2011_LC_', city, '.tif'))
+  path.landcover <- file.path('data','intermediate',city, paste0('NLCD2011_LC_', city, '.tif'))
   
   # check if processed already
   alreadyProcessed = file.exists(path.landcover)
   if (alreadyProcessed){
     # import the buffered shapefile
-    landcover <- raster(path.landcover)
+    landcover.city <- raster(path.landcover)
   } else {
     # import the raw image
     print('import')
     landcover.all <- raster(file.path('data','raw',city,fn_land_cover, paste0(fn_land_cover, '.tif')))
     
     # change projection of satellite
-    satellite.city <- projectRaster(satellite.city, crs=CRS(proj4string(landcover.all)))
+    satellite.proj <- projectRaster(satellite.city, crs=CRS(proj4string(landcover.all)))
     
     # nearest neighbor resample
     print('resample')
-    # rasterOptions(maxmemory = 1e+06)
-    landcover.city <- resample(landcover.all, satellite.city, 'ngb')
+    landcover.city <- resample(landcover.all, satellite.proj, 'ngb')
     
     # crop and mask
     print('crop and mask')
-    landcover.city <- crop(landcover.city, extent(satellite.city))
-    landcover.city <- mask(landcover.city, satellite.city)
+    landcover.city <- crop(landcover.city, extent(satellite.proj))
+    landcover.city <- mask(landcover.city, satellite.proj)
     
     # change projection
     rasterOptions(maxmemory = 1e+07)
     print('project')
     landcover.city <- projectRaster(landcover.city, crs=CRS("+init=epsg:4326"))
+    
+    # repeat now that's in the correct projection
+    print('resample')
+    landcover.city <- resample(landcover.city, satellite.city, 'ngb')
+    
+    # crop and mask
+    print('crop and mask')
+    landcover.city <- crop(landcover.city, extent(satellite.city))
+    landcover.city <- mask(landcover.city, satellite.city)
     
     # save
     writeRaster(landcover.city, path.landcover)
