@@ -207,7 +207,7 @@ def determine_emissivity(info_satellite, dn, source_city):
     city_idx = source_city.loc[source_city['city']==info_satellite['city']].index
     landcover_id = source_city['land_cover'][city_idx].values[0]
     fn_landcover = '_'.join(landcover_id.split('_',2)[:2] + [city])
-    fn_land_cover = 'data/intermediate/{}/{}.tif'.format(city, fn_landcover)
+    fn_land_cover = 'data/processed/{}/{}.tif'.format(city, fn_landcover)
     print(fn_land_cover)
 
     # import

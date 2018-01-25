@@ -9,7 +9,7 @@ maps
 **/_scratch
 *.Rproj
 figs/exploratory
-*.log
+**.log
 *.lnk
 *.html
 *.Rproj.user

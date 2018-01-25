@@ -142,7 +142,7 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
     # change projection
     rasterOptions(maxmemory = 1e+07)
     print('project')
-    landcover.city <- projectRaster(landcover.city, crs=CRS("+init=epsg:4326"))
+    landcover.city <- projectRaster(landcover.city, crs=CRS("+init=epsg:4326"), method = 'ngb')
     
     # repeat now that's in the correct projection
     print('resample')
