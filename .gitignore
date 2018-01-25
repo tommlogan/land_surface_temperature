@@ -10,6 +10,7 @@ maps
 *.Rproj
 figs/exploratory
 **.log
+*.log
 *.lnk
 *.html
 *.Rproj.user

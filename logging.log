@@ -1,20 +1,7 @@
-2018-01-25 11:05:23,075 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20150817_20170226_01_T1
-2018-01-25 11:05:23,079 __main__        INFO     MainProcess Reading metadata
-2018-01-25 11:05:23,084 __main__        INFO     MainProcess Clipping geographic data if necessary
-2018-01-25 11:06:05,141 __main__        INFO     MainProcess Starting LST calculations
-2018-01-25 11:06:05,178 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,184 __main__        INFO     MainProcess Determining emissivity map
-2018-01-25 11:06:05,213 __main__        INFO     MainProcess LC tif size: (812, 684)
-2018-01-25 11:06:05,242 __main__        INFO     MainProcess calculating satellite temperature
-2018-01-25 11:06:05,281 __main__        INFO     MainProcess making the atmospheric correction
-2018-01-25 11:06:05,331 __main__        INFO     MainProcess Calculating the albedo
-2018-01-25 11:06:05,547 __main__        INFO     MainProcess Calculating the albedo
-2018-01-25 11:06:05,562 __main__        INFO     MainProcess Calculating the albedo
-2018-01-25 11:06:05,602 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,633 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,673 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,710 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,747 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:06:05,768 __main__        INFO     MainProcess Calculating the albedo
-2018-01-25 11:06:05,784 __main__        INFO     MainProcess Processing image nan
-2018-01-25 11:06:05,788 __main__        INFO     MainProcess Reading metadata
+2018-01-25 11:14:03,008 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20150817_20170226_01_T1
+2018-01-25 11:14:03,012 __main__        INFO     MainProcess Reading metadata
+2018-01-25 11:14:03,017 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-01-25 11:14:05,353 __main__        INFO     MainProcess Starting LST calculations
+2018-01-25 11:14:05,380 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:14:05,385 __main__        INFO     MainProcess Determining emissivity map
+2018-01-25 11:14:05,407 __main__        INFO     MainProcess LC tif size: (812, 684)
