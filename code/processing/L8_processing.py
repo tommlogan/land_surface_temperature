@@ -245,7 +245,7 @@ def calc_satellite_temperature(TOA, meta_dict, emissivity):
     L_lambda = TOA/emissivity
 
     # calculate the satellite brightness
-    temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log((meta_dict['K1_CONSTANT_BAND_10']/L_lambda) + 1))
+    temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log(1 + (meta_dict['K1_CONSTANT_BAND_10']/L_lambda)))
 
     return temp_satellite
 
@@ -260,6 +260,8 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
 
     # temparature from csv file
     temp_max = info_satellite['max_temp_celsius']
+    # convert to Kelvin
+    temp_max += 273.15
 
     # constants for the algorithm
     a_6 = -67.355351
@@ -271,7 +273,7 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
     d_6 = (1 - t_6)*(1 + (1 - emissivity)*t_6)
     t_a = 16.0110 + 0.92621*temp_max
 
-    # mono-window algorithm
+    # mono-window algorithm (Qin et al., 2001, page 3726)
     T = a_6*(1 - c_6 - d_6) + (b_6*(1 - c_6 - d_6) + c_6 + d_6)*temp_satellite - d_6*t_a
     temp_landsurface = T/c_6
 
