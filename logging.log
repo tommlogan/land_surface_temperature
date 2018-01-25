@@ -1,7 +1,20 @@
-2018-01-25 11:14:03,008 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20150817_20170226_01_T1
-2018-01-25 11:14:03,012 __main__        INFO     MainProcess Reading metadata
-2018-01-25 11:14:03,017 __main__        INFO     MainProcess Clipping geographic data if necessary
-2018-01-25 11:14:05,353 __main__        INFO     MainProcess Starting LST calculations
-2018-01-25 11:14:05,380 __main__        INFO     MainProcess Calculating TOAr
-2018-01-25 11:14:05,385 __main__        INFO     MainProcess Determining emissivity map
-2018-01-25 11:14:05,407 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-01-25 11:41:51,673 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20150817_20170226_01_T1
+2018-01-25 11:41:51,676 __main__        INFO     MainProcess Reading metadata
+2018-01-25 11:41:51,680 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-01-25 11:41:53,880 __main__        INFO     MainProcess Starting LST calculations
+2018-01-25 11:41:53,920 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:53,925 __main__        INFO     MainProcess Determining emissivity map
+2018-01-25 11:41:53,951 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-01-25 11:41:53,974 __main__        INFO     MainProcess calculating satellite temperature
+2018-01-25 11:41:54,004 __main__        INFO     MainProcess making the atmospheric correction
+2018-01-25 11:41:54,080 __main__        INFO     MainProcess Calculating the albedo
+2018-01-25 11:41:54,277 __main__        INFO     MainProcess Calculating the albedo
+2018-01-25 11:41:54,292 __main__        INFO     MainProcess Calculating the albedo
+2018-01-25 11:41:54,323 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:54,365 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:54,410 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:54,453 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:54,491 __main__        INFO     MainProcess Calculating TOAr
+2018-01-25 11:41:54,508 __main__        INFO     MainProcess Calculating the albedo
+2018-01-25 11:41:54,523 __main__        INFO     MainProcess Processing image nan
+2018-01-25 11:41:54,526 __main__        INFO     MainProcess Reading metadata

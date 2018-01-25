@@ -168,8 +168,7 @@ def calc_LST(info_satellite, meta_dict, source_city):
 
     # emissivity correction
     emissivity = determine_emissivity(info_satellite, dn, source_city)
-    import code
-    code.interact(local = locals())
+
     # calculate the at-satellite brightness temperature
     temp_satellite = calc_satellite_temperature(TOA, meta_dict, emissivity)
 
@@ -222,14 +221,14 @@ def determine_emissivity(info_satellite, dn, source_city):
 
     # convert land_cover to emissivity array
     # land cover codes are here: https://www.mrlc.gov/nlcd11_leg.php
-    emissivity[(1 =< land_cover) & (land_cover < 20)] = 0.989 # Water
-    emissivity[(20 =< land_cover) & (land_cover < 30)] = 0.912 # Developed
-    emissivity[(30 =< land_cover) & (land_cover < 40)]  = 0.896 # Barren
-    emissivity[(40 =< land_cover) & (land_cover < 50)]  = 0.967 # Forest
-    emissivity[(50 =< land_cover) & (land_cover < 80)]  = 0.957 # Grass
-    emissivity[(80 =< land_cover) & (land_cover < 90)]  = 0.957 # Cropland
-    emissivity[90 =< land_cover] = 0.957 # Wetlands is assumed to be Sparse Vegetation
-    # emissivity[land_cover < 0] = np.nan
+    emissivity[(1 <= land_cover) & (land_cover < 20)] = 0.989 # Water
+    emissivity[(20 <= land_cover) & (land_cover < 30)] = 0.912 # Developed
+    emissivity[(30 <= land_cover) & (land_cover < 40)]  = 0.896 # Barren
+    emissivity[(40 <= land_cover) & (land_cover < 50)]  = 0.967 # Forest
+    emissivity[(50 <= land_cover) & (land_cover < 80)]  = 0.957 # Grass
+    emissivity[(80 <= land_cover) & (land_cover < 90)]  = 0.957 # Cropland
+    emissivity[90 <= land_cover] = 0.957 # Wetlands is assumed to be Sparse Vegetation
+    emissivity[land_cover < 0] = np.nan
 
     return(emissivity)
 
@@ -242,8 +241,7 @@ def calc_satellite_temperature(TOA, meta_dict, emissivity):
         Returns temperature in Kelvin
     '''
     logger.info('calculating satellite temperature')
-    # import code
-    # code.interact(local = locals())
+
     # spectral radiance
     L_lambda = TOA/emissivity
 
