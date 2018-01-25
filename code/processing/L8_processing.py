@@ -279,7 +279,7 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
     temp_landsurface = T/c_6
 
     # converting to celsius
-    temp_landsurface = temp_landsurface - 273.15
+    temp_landsurface -= 273.15
 
     return temp_landsurface
 
