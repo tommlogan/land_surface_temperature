@@ -56,6 +56,17 @@ def main():
         logger.info('Processing image {}'.format(info_satellite['landsat_product_id']))
         process_image(info_satellite, source_city)
 
+    # take average of images
+    for city in np.unique(source_satellite['city']):
+        # loop cities
+        for day_night in ['day', 'night']:
+            # loop day and night
+            # filter the source_satellite df for the images which I'll then mean
+            images_meta = source_satellite.loc[(source_satellite['city'] == city) & (source_satellite['day_night'] == day_night)]
+            # average images
+            image_mean(images_meta, day_night, city)
+
+
 
 def process_image(info_satellite, source_city):
     '''
@@ -176,7 +187,7 @@ def calc_LST(info_satellite, meta_dict, source_city):
     temp_surface = atmos_correction(temp_satellite, info_satellite, emissivity)
 
     # write to tif
-    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(city, 'lst', info_satellite['date'])
+    fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(city, 'lst', info_satellite['date'], info_satellite['day_night'])
     array_to_raster(temp_surface, fn_out, image_b10)
 
 
@@ -310,8 +321,11 @@ def calc_albedo(info_satellite, meta_dict):
             (0.373*reflect_band[3]) + (0.085*reflect_band[4]) +
             (0.072*reflect_band[5]) - 0.018) / 1.016
 
+    # remove no data values
+    albedo[albedo < 0] = np.nan
+
     # save
-    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(info_satellite['city'], 'albedo', info_satellite['date'])
+    fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(info_satellite['city'], 'albedo', info_satellite['date'], info_satellite['day_night'])
     array_to_raster(albedo, fn_out, ds)
 
 
@@ -320,6 +334,7 @@ def calc_NDVI(info_satellite):
         calculate the NDVI
         For landsat8 it's (B5 – B4) / (B5 + B4) - see Ben's email dated 7/26/16
     '''
+    logger.info('Calculating the ndvi')
     # import bands
     landsat_band = dict()
     band = 1
@@ -331,8 +346,11 @@ def calc_NDVI(info_satellite):
     # calculate the NDVI
     ndvi = (landsat_band[5] - landsat_band[4])/(landsat_band[5] + landsat_band[4])
 
+    # removing no data
+    ndvi[landsat_band[band] < 0] = np.nan
+
     # save NVDI
-    fn_out = 'data/processed/image/{}/{}_{}.tif'.format(info_satellite['city'], 'ndvi', info_satellite['date'])
+    fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(info_satellite['city'], 'ndvi', info_satellite['date'], info_satellite['day_night'])
     array_to_raster(ndvi, fn_out, ds)
 
 
@@ -365,6 +383,33 @@ def array_to_raster(output, out_filename, ds):
     # georeference the image and set the projection
     dataset.SetGeoTransform(ds.GetGeoTransform())
     dataset.SetProjection(ds.GetProjection())
+
+
+def image_mean(images_meta, day_night, city):
+    '''
+        calculate the mean of the satellite images so that the variation in time of day is mitigated
+        import processed images
+        calculate mean
+        save
+    '''
+    # loop through the image types
+    image_types = ['lst', 'ndvi', 'albedo']
+    for image_type in image_types:
+        logger.info('Calculating the mean: {}, {}, {}'.format(city, image_type, day_night))
+        # create a dict for the images
+        images = list()
+        # loop dates
+        for date in images_meta['date']:
+            # import the image
+            fn_import = 'data/processed/image/{}/{}_{}_{}.tif'.format(city, image_type, date, day_night)
+            ds = gdal.Open(fn_import)
+            # convert to array
+            images.append(ds.ReadAsArray())
+        # take the mean
+        image_mean = np.mean(images, 0)
+        # save
+        fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(city, image_type, 'mean', day_night)
+        array_to_raster(image_mean, fn_out, ds)
 
 
 if __name__ == '__main__':
