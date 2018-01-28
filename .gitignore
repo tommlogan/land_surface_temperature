@@ -5,9 +5,16 @@ literature
 *.RData
 bayesnet
 data
-maps
 **/_scratch
+*.Rproj
+figs/exploratory
+**.log
+*.log
+*.lnk
+*.html
+*.Rproj.user
 .Rproj.user
 figs
 *.aprx
 *.pagx
+maps
