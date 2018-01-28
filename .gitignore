@@ -5,7 +5,6 @@ literature
 *.RData
 bayesnet
 data
-maps
 **/_scratch
 *.Rproj
 figs/exploratory
@@ -15,3 +14,4 @@ figs/exploratory
 *.html
 *.Rproj.user
 .Rproj.user
+maps
