@@ -12,11 +12,11 @@ Understanding the factors influencing urban land surface temperature during the 
 * [ ] Phoenix (phx)
 * [ ] Portland (por)
 
-Maybe will add a couple of cities from non-industrialized countries to see if the results are generalizable?
+I'd like to add three cities from non-industrialized countries to see if the results are generalizable?
 * [ ] Accra, Ghana (acr) - I'm not sure if the sat images are clear enough
 * [ ] Kolkata, India (kol)
 * [ ] Manila, Philippines (man)
-* [ ] Nairobi, Kenya (nai)
+* [ ] Nairobi, Kenya (nai) - AS has a paper on nai already, so data must be available
 
 ## Steps:
 1. Process the LandSat images to land surface temperatures
@@ -63,8 +63,12 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
       I may need to come back to [this link](https://gis.stackexchange.com/questions/103166/simplest-way-to-limit-the-memory-that-the-raster-package-uses-in-r) if I run into further raster memory issues during projection.
   3. The final images are saved in `data/processed/image/<city>`
 
-#### 1.4 Calculate average of LST, albedo, NDVI
-  1. df
+#### 1.4 Calculate mean LST, albedo, NDVI
+  This is done within `L8_processing.py`
+
+  This is a plot of the mean LST for Baltimore
+    ![image](fig/map/lst_day_mean.jpg){:width="50%"}
+
 
 #### 1.5 Grid data for analysis
   1. df
