@@ -9,3 +9,5 @@ maps
 **/_scratch
 .Rproj.user
 figs
+*.aprx
+*.pagx
