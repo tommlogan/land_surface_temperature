@@ -8,8 +8,7 @@ data
 **/_scratch
 *.Rproj
 figs/exploratory
-**.log
-*.log
+.log
 *.lnk
 *.html
 *.Rproj.user
@@ -18,3 +17,4 @@ figs
 *.aprx
 *.pagx
 maps
+.lnk
