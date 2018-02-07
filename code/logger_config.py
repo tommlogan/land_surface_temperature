@@ -16,7 +16,7 @@ config = {
         },
         'file': {
             'class': 'logging.FileHandler',
-            'filename': 'logging.log',
+            'filename': 'code/logging.log',
             'mode': 'w',
             'formatter': 'detailed',
         }
