@@ -8,15 +8,15 @@ data
 **/_scratch
 *.Rproj
 figs/exploratory
-**.log
 *.log
 *.lnk
 *.html
 *.Rproj.user
-.Rproj.user
+*.Rproj.user
 figs
 *.aprx
 *.pagx
 maps
 *.pyc
 **/__pycache__
+*.lnk
