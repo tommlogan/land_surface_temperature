@@ -20,3 +20,4 @@ maps
 *.pyc
 **/__pycache__
 *.lnk
+venv
