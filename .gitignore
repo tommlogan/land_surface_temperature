@@ -19,4 +19,4 @@ figs
 *.pagx
 maps
 *.pyc
-**/_pycache_
+**/__pycache__

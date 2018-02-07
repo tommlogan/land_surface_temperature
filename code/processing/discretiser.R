@@ -6,7 +6,7 @@
 ###         this database has a specific format and will be outlined here
 ###         - in the meantime, look at the example database
 ###      the grid size
-###      cityName = string, capitalise first e.g. 'Baltimore', or 'Detroit'
+###      city.name = string, capitalise first e.g. 'Baltimore', or 'Detroit'
 ### OUTPUT:
 ###      csv with aggregated spatial information
 ###      shapefile containing same information
@@ -14,8 +14,6 @@
 ###      
 ### AUTHOR:
 ###      Tom Logan
-### MODIFIED:
-###      June 2016
 ###
 ### NOTES:
 ###      A function for R
@@ -28,7 +26,6 @@
 #######
 ## Libraries
 #######
-# library(maptools)
 library(rgdal)
 library(raster)
 library(rgeos)
@@ -43,8 +40,8 @@ main = function(data.fn,a=1){
   #######
   ## USER INPUTS
   #######
-  # what is the square grid size in feet?
-  gridSize = 2000
+  # what is the square grid size in meters?
+  gridSize = 500
   # what is minimum grid area you'll include?
   minGridArea = 0
   # what projection are you using? 
@@ -52,8 +49,12 @@ main = function(data.fn,a=1){
   ####
   ## Import the data source catalogue
   ####
-  database = read.csv(file.path('code','processing', data.fn),header=T,fill = T,stringsAsFactors=FALSE)
-  database = database[!apply(is.na(database) | database == "", 1, all), ]
+  dir.data <- file.path(getwd(), 'code','processing', data.fn)
+  database <- read.csv(dir.data,header=T,fill = T,stringsAsFactors=FALSE)
+  database <- database[!apply(is.na(database) | database == "", 1, all), ]
+  
+  # automate this with a loop later
+  city.name <- 'bal'
   
   ####
   ## Create grid
@@ -64,69 +65,49 @@ main = function(data.fn,a=1){
   ####
   ## Loop through database. extract file names and data types for each
   ####
-  # a = 1 # startRow (useful to change sometimes for debugging)
-  b = nrow(database) #40 was last to work #45 didn't work
+  a = 2 # startRow (useful to change sometimes for debugging)
+  b = nrow(database) 
   for (i in seq(a,b)){
     # import the data
-    theData = importData(databaseRow = database[i,])
-    dataType = attr(theData,'dataType')
-    dataName = attr(theData,'varName')
-    print(paste('processing #',i,': ',attr(theData,'fileName'),sep=''),row.names = FALSE)
+    data.current = ImportData(database.row = database[i,])
+    data.type = attr(data.current,'data.type')
+    data.name = attr(data.current,'var.name')
+    print(paste('processing #',i,': ',attr(data.current,'file.name'),sep=''),row.names = FALSE)
     ####
     ## process the data type appropriately
     ####
-    if ((strcmp('ACS_2014',substr(attr(theData,'fileName'),1,8)) & !exists("before_ACS"))) {
+    if ((strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8)) & !exists("before_ACS"))) {
       before_ACS = ncol(sg@data)
     } 
-    if (dataType == 'areaLevel'){
-      sg = areaLevel(sg,theData)
-    } else if (dataType == 'polyIntersect'){
-      sg = areaInGrid(sg,sf = theData,dataName,database)
-    } else if (dataType == 'pointCount'){
-      sg = pointPatternCount(sg,pointData = theData)
-    } else if (dataType == 'pointDistance' || dataType == 'polyDistance'){
-      sg = determineDistance(sg,distData = theData)
-    } else if (dataType == 'lineLength'){
-      sg = lineLength(sg,theData)
-    } else if (dataType == 'raster'){
-      sg = processRaster(sg,rasterData = theData)
-    } else if (dataType == 'rasterCategory'){
-      sg = categoriseRaster(sg,rasterData = theData,database)
-    } else if (dataType == 'areaLevel_Count'){
-      sg = areaCount(sg,sf=theData,database)
-    } else if (dataType == 'GeoStat'){  
-      sg = geostat(sg,pointData = theData)
+    if (data.type == 'areaLevel'){
+      sg = areaLevel(sg,data.current)
+    } else if (data.type == 'polyIntersect'){
+      sg = areaInGrid(sg,sf = data.current,data.name,database)
+    } else if (data.type == 'pointCount'){
+      sg = pointPatternCount(sg,data.point = data.current)
+    } else if (data.type == 'pointDistance' || data.type == 'polyDistance'){
+      sg = determineDistance(sg,distData = data.current)
+    } else if (data.type == 'lineLength'){
+      sg = lineLength(sg,data.current)
+    } else if (data.type == 'raster'){
+      sg = processRaster(sg,data.raster = data.current)
+    } else if (data.type == 'rasterCategory'){
+      sg = categoriseRaster(sg,data.raster = data.current,database)
+    } else if (data.type == 'areaLevel_Count'){
+      sg = areaCount(sg,sf=data.current,database)
+    } else if (data.type == 'GeoStat'){  
+      sg = geostat(sg,data.point = data.current)
     } else {
       print('WARNING: data type not recognised')
     }
     print(i)
     print(length(sg))
     
-    #     print(warnings())
-    #     assign("last.warning", NULL, envir = baseenv())
-    #     if (i==1){
-    #       ####3
-    #       ## clip to boundary
-    #       ####
-    #       sg = sg[sg$area>minGridArea,]
-    #     }
   }
   
   ####
   ## clip to boundary
   ####
-  #if (i == 1){ # only need to do it once
-  # if (cityName=='Baltimore'){
-  #   sg = sg[sg$area>minGridArea,]
-  # } else if (cityName=='Detroit'){
-  #   sg = sg[sg@data$districts!="",]
-  # }
-  
-  # for Detroit we'll use the districts. not sure why the area is not working.
-  # sg = sg[sg@data$districts!="",]
-  # you will get " Error in poly2nb(sg) : non-positive number of entities " if no shape files in this dataset to provide area.
-  # if this is the case, remove the minArea requirement.
-  #}
   sg@data$cId = 1:nrow(sg@data)
   
   ####
@@ -140,25 +121,19 @@ main = function(data.fn,a=1){
   ####
   today = Sys.Date()
   date_str = format(today,format="%Y-%m-%d")
-  save_dir = paste('F:/UrbanDataProject/cities/',cityName,'/gridded_data/',date_str,sep='')
-  dir.create(save_dir)
-  setwd(save_dir)
+  dir.save = file.path(getwd(), 'data', 'processed', 'grid', city.name, date_str)
+  dir.create(dir.save)
+  setwd(dir.save)
   # what is the output filename?
-  outputFileName = paste(tolower(cityName),'_data',sep='')
-  outvar.name <- paste('data.',tolower(cityName),sep='')
+  outputFileName <- paste(tolower(city.name),'_data',sep='')
+  outvar.name <- paste0('data.',tolower(city.name))
+  
   ####
   ## save as RData file
   ####
   assign(outvar.name, sg@data)
   save(list = outvar.name, file = paste(outputFileName,'.RData',sep='')) 
-  # if (cityName=='Baltimore'){
-  #   baltimoreData = sg@data
-  #   save(baltimoreData, file = paste(outputFileName,'.RData',sep='')) 
-  # } else if (cityName=='Detroit'){
-  #   detroitData = sg@data
-  #   save(detroitData, file = paste(outputFileName,'.RData',sep='')) 
-  # }
-  
+
   ####
   ## add to the csv file
   ####
@@ -167,62 +142,59 @@ main = function(data.fn,a=1){
   ####
   ## create a shape file
   ####
-  # half_len = ncol(sg@data)/2
-  #   writeOGR(sg,workDir, outputFileName, driver = 'ESRI Shapefile')
-  #   writeSpatialShape(sg, outputFileName)   
-  if (strcmp('ACS_2014',substr(attr(theData,'fileName'),1,8))){
+  if (strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8))){
     write_ints = c(1,seq(before_ACS,ncol(sg@data),by=500),ncol(sg@data))
     for (i in 2:length(write_ints)){
       sg_write = sg[write_ints[i-1]:write_ints[i]]
       out_name = paste(outputFileName,'_',(i-1),sep='')
       
-      # sg_2 = sg[-c(1:num_vars_pre_spat_lag)]; out_name_2 = paste(outputFileName,'_2',sep='')
-      writeOGR(sg_write,save_dir, out_name, driver = 'ESRI Shapefile')
-      writeSpatialShape(sg_write, paste(save_dir,'/',out_name,sep=''))
-    # writeOGR(sg_2,workDir, out_name_2, driver = 'ESRI Shapefile')
-    # writeSpatialShape(sg_2, out_name_2)
+      writeOGR(sg_write,dir.save, out_name, driver = 'ESRI Shapefile')
+      writeSpatialShape(sg_write, paste(dir.save,'/',out_name,sep=''))
     } 
   } else {
-    # sg_2 = sg[-c(1:num_vars_pre_spat_lag)]; out_name_2 = paste(outputFileName,'_2',sep='')
-    writeOGR(sg,save_dir, outputFileName, driver = 'ESRI Shapefile')
-    writeSpatialShape(sg, paste(save_dir,'/',outputFileName,sep=''))
+    writeOGR(sg,dir.save, outputFileName, driver = 'ESRI Shapefile')
+    writeSpatialShape(sg, paste(dir.save,'/',outputFileName,sep=''))
   }
-    
-  
-  ### Plot
-  # plot(ra, col=ra@data$COLOUR)
 }
 
-importData = function(databaseRow){
+
+ImportData = function(database.row){
   # this imports the data and assigns the attribute for what spatial data type it is
-  workDir = getwd()
-  fileType = databaseRow$fileType
-  fileName = paste('Data/',databaseRow$FileName,databaseRow$fileType,sep='')
-  # print(paste('importing: ',fileName,sep=''),row.names = FALSE)
-  # different opening methods depending on filetype
-  if (fileType == ".shp"){
-    theData = readOGR(dsn = paste(workDir,'/Data',sep=''), layer = databaseRow$FileName,verbose = FALSE)
+  dir.work <- getwd()
+  file.type <- database.row$fileType
+  file.dir <- file.path('data',database.row$Path, database.row$City)
+  file.name <- paste0(database.row$FileName,database.row$fileType)
+  file.epsg <- database.row$projection_epsg
+  data.projection <- CRS(paste0("+init=epsg:", file.epsg))
+  
+  # different opening methods depending on file.type
+  if (file.type == ".shp"){
+    data.current = readOGR(dsn = file.dir, layer = database.row$FileName, verbose = FALSE)
     # <if there is an error "incompatible geometry: 4", go into arcGIS and use multipart to singlepart tool and save>
-  } else if (fileType == ".tif"){
-    theData = raster(fileName)
+    # project data into meters
+    data.current <- spTransform(data.current, data.projection)
+  } else if (file.type == ".tif"){
+    data.current = raster(file.path(file.dir, file.name))
+    # project data into meters
+    data.current <- projectRaster(data.current, crs = data.projection)
   } else { # .csv
-    theData = read.csv(fileName,header=T,fill = T,stringsAsFactors=FALSE)
+    data.current = read.csv(file.name,header=T,fill = T,stringsAsFactors=FALSE)
   }
-  attr(theData,'dataType') = databaseRow$dataType
-  attr(theData,'varName') = databaseRow$varName
-  attr(theData,'fileType') = databaseRow$fileType
-  attr(theData,'fileName') = databaseRow$FileName
+  attr(data.current,'data.type') = database.row$data.type
+  attr(data.current,'var.name') = database.row$var.name
+  attr(data.current,'file.type') = database.row$file.type
+  attr(data.current,'file.name') = database.row$FileName
   
-  
-  return (theData)
+  return (data.current)
 }
+
 
 createGrid = function(gridSize,database){
   ## takes the grid size input
   ## returns a grid which covers entire area
   
   # first use an area level data from database to define grid limits
-  sf = importData(database[1,]) 
+  sf = ImportData(database[1,]) 
   
   # just get the outline - not internal census tracts
   # sf   <- gUnionCascaded(sf)
@@ -312,18 +284,18 @@ areaLevel = function(sg,sf){
   # omit cells that don't have a CSA (there is no data for them)
   
   # writes to shapefile
-  # writeOGR(sg,workDir, outputFileName, driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
+  # writeOGR(sg,dir.work, outputFileName, driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
   # writes to csv
   
   return(sg)
 }
 
-areaInGrid = function(sg,sf,dataName,database,to_save = TRUE){
+areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
   # intersects the polygons with the grid and determines the area
   if (to_save){
     # check if a saved RData file already exists
     gridSize = attr(sg,'grid_size')
-    gridded_filename = paste('Data/',dataName,'_gridsize_',gridSize,'.RData',sep='')
+    gridded_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
     alreadyProcessed = file.exists(gridded_filename)
     
     if (alreadyProcessed) {
@@ -385,11 +357,11 @@ areaInGrid = function(sg,sf,dataName,database,to_save = TRUE){
       stopCluster(cl)
       
       # add new covariate to dataframe
-      sg_temp@data[,dataName]=unlist(area_list)
+      sg_temp@data[,data.name]=unlist(area_list)
       # }
       
       # writes to shapefile
-      # writeOGR(sg,workDir, outputFileName, driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
+      # writeOGR(sg,dir.work, outputFileName, driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
       # writes to csv
       
     }
@@ -404,13 +376,13 @@ areaInGrid = function(sg,sf,dataName,database,to_save = TRUE){
   return(sg)
 }
 
-areaCount = function(sg,sf=theData,database){
+areaCount = function(sg,sf=data.current,database){
   # process area-level data by finding taking the area weighted sum.
   
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
-  dataName = attr(sf,'varName')
-  gridded_filename = paste('Data/',dataName,'_gridsize_',gridSize,'.RData',sep='')
+  data.name = attr(sf,'var.name')
+  gridded_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_filename)
   
   if (alreadyProcessed) {
@@ -533,37 +505,37 @@ areaCount = function(sg,sf=theData,database){
   sg@data = cbind(sg@data, sg_temp@data)
   
   # writes to shapefile
-  # writeOGR(sg_temp,workDir, 'height_cells', driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
+  # writeOGR(sg_temp,dir.work, 'height_cells', driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
   # writes to csv
   
   return(sg)
 }
 
-pointPatternCount = function(sg,pointData){
+pointPatternCount = function(sg,data.point){
   # process point pattern data
   # return a count of number of points within each grid cell
-  dataName = attr(pointData,'varName')
-  fileType = attr(pointData,'fileType')
+  data.name = attr(data.point,'var.name')
+  file.type = attr(data.point,'file.type')
   
-  if (fileType == ".csv"){
-    pointData = csvToSpatial(pointData)
+  if (file.type == ".csv"){
+    data.point = csvToSpatial(data.point)
   }
   # projection
-  if (proj4string(sg) != proj4string(pointData)){
-    pointData = spTransform(pointData,CRS(proj4string(sg)))
+  if (proj4string(sg) != proj4string(data.point)){
+    data.point = spTransform(data.point,CRS(proj4string(sg)))
     # print(sf)
   }
   
   # overlay with polygons
-  whichCid <- over(pointData, sg[,"cId"])
+  whichCid <- over(data.point, sg[,"cId"])
   
   # count and assign to sg
   counts = table(unlist(whichCid))
-  sg@data[dataName] = 0*nrow(sg)
-  sg@data[as.integer(rownames(counts)),dataName] = counts
+  sg@data[data.name] = 0*nrow(sg)
+  sg@data[as.integer(rownames(counts)),data.name] = counts
   
   # writes to shapefile
-  # writeOGR(pointData,workDir, 'pointData_test', driver = 'ESRI Shapefile')
+  # writeOGR(data.point,dir.work, 'data.point_test', driver = 'ESRI Shapefile')
   # writes to csv
   # write.csv(sg@data,paste(outputFileName,'.csv',''))
   
@@ -581,13 +553,13 @@ determineDistance = function(sg,distData){
   # process data
   # return the distance from center of each grid cell to nearest point/polygon
   
-  dataName = attr(distData,'varName')
-  fileType = attr(distData,'fileType')
-  dataType = attr(distData,'dataType')
+  data.name = attr(distData,'var.name')
+  file.type = attr(distData,'file.type')
+  data.type = attr(distData,'data.type')
   
-  if (fileType == ".csv"){
+  if (file.type == ".csv"){
     distData = csvToSpatial(distData)
-  } else if (dataType == 'polyDist'){
+  } else if (data.type == 'polyDist'){
     # if shapefile, convert to line so is distance to edge
     linesData = as(distData,'SpatialLines')  
   }
@@ -599,60 +571,60 @@ determineDistance = function(sg,distData){
   }
   
   # determine minimum distance and assign to sg
-  sg@data[dataName] = 0*nrow(sg)
+  sg@data[data.name] = 0*nrow(sg)
   for (j in seq(nrow(sg))){
     # determine centroid of cell
     centroid = readWKT(paste("POINT(",toString(coordinates(sg[j,])[[1]]),toString(coordinates(sg[j,])[[2]]),")"))
     proj4string(centroid) = proj4string(sg)
     # sp2   <- SpatialPoints(centroid,proj4string=CRS(proj4string(sg)))
     
-    if (dataType == 'polyDist'){
+    if (data.type == 'polyDist'){
       # check to see if point is in polygon
       inPoly = gContains(distData,centroid)
       # print(inPoly)
       if (inPoly){
         # print('in poly')
         # distance is zero
-        sg@data[j,dataName] = 0
+        sg@data[j,data.name] = 0
       } else {
-        sg@data[j,dataName] = min(gDistance(centroid, linesData, byid=TRUE))
+        sg@data[j,data.name] = min(gDistance(centroid, linesData, byid=TRUE))
       }
     } else{
-      sg@data[j,dataName] = min(gDistance(centroid, distData, byid=TRUE))
+      sg@data[j,data.name] = min(gDistance(centroid, distData, byid=TRUE))
     }
   }
   
   
   # writes to shapefile
-  # writeOGR(sg,workDir, 'pointDataDist_test', driver = 'ESRI Shapefile')
+  # writeOGR(sg,dir.work, 'data.pointDist_test', driver = 'ESRI Shapefile')
   # writes to csv
   # write.csv(sg@data,paste(outputFileName,'.csv',''))
   return(sg)
 }
 
-csvToSpatial = function(pointData){
+csvToSpatial = function(data.point){
   # the csv file needs a column 'Latitude' and a column 'Longitude'
-  # pointData = read.csv('Data/pointPatternCount_example_vbcrime.csv',header=T,fill = T,stringsAsFactors=FALSE)
+  # data.point = read.csv('Data/pointPatternCount_example_vbcrime.csv',header=T,fill = T,stringsAsFactors=FALSE)
   # these columns need to be numeric, remove any NAs
-  latCol = which(tolower(colnames(pointData))=='latitude' | tolower(colnames(pointData))=='lat')
-  lonCol = which(tolower(colnames(pointData))=='longitude' | tolower(colnames(pointData))=='long' | tolower(colnames(pointData))=='lon'| tolower(colnames(pointData))=='lng')
-  pointData[,latCol] = as.numeric(pointData[,latCol])
-  pointData <- pointData[!is.na(pointData[,latCol]),] # this should remove all rows with NAs
-  pointData <- pointData[!(pointData[,latCol] >= 999),] # this should remove all rows with 99999 for lat e.g. non conformant lat/lon
-  pointData[,lonCol] = as.numeric(pointData[,lonCol])
+  latCol = which(tolower(colnames(data.point))=='latitude' | tolower(colnames(data.point))=='lat')
+  lonCol = which(tolower(colnames(data.point))=='longitude' | tolower(colnames(data.point))=='long' | tolower(colnames(data.point))=='lon'| tolower(colnames(data.point))=='lng')
+  data.point[,latCol] = as.numeric(data.point[,latCol])
+  data.point <- data.point[!is.na(data.point[,latCol]),] # this should remove all rows with NAs
+  data.point <- data.point[!(data.point[,latCol] >= 999),] # this should remove all rows with 99999 for lat e.g. non conformant lat/lon
+  data.point[,lonCol] = as.numeric(data.point[,lonCol])
   # converts to spatial points data frame
-  coordinates(pointData) = c(lonCol,latCol)
+  coordinates(data.point) = c(lonCol,latCol)
   
-  # projection(pointData) = crs(sg)
-  proj4string(pointData) =  "+proj=longlat +datum=WGS84"
+  # projection(data.point) = crs(sg)
+  proj4string(data.point) =  "+proj=longlat +datum=WGS84"
   
-  return(pointData)
+  return(data.point)
 }
 
 lineLength = function(sg,lineData){
   # returns the length of lines within the cell (e.g. bike lane)
-  dataName = attr(lineData,'varName')
-  fileType = attr(lineData,'fileType')
+  data.name = attr(lineData,'var.name')
+  file.type = attr(lineData,'file.type')
   
   # address projection
   lineData = spTransform(lineData, CRS(proj4string(sg)))
@@ -661,8 +633,8 @@ lineLength = function(sg,lineData){
   rp$length <- gLength(rp, byid=TRUE) / 1000
   lengthCell <- tapply(rp$length, rp$cId, sum)
   # append to datastructure
-  sg@data[dataName] = 0*nrow(sg)
-  sg@data[as.integer(rownames(lengthCell)),dataName] = lengthCell
+  sg@data[data.name] = 0*nrow(sg)
+  sg@data[as.integer(rownames(lengthCell)),data.name] = lengthCell
   
   return (sg)
 }
@@ -671,16 +643,16 @@ spatialLag = function(sg){
   # a list of neighbours for each gridcell
   neighs = poly2nb(sg)
   dimSg = dim(sg)
-  varNameList = colnames(sg@data)
+  var.nameList = colnames(sg@data)
   # loop through the data variables
   for (i in seq(5,dimSg[2])){
     # for each variable that is after the 4th (which are the presets (area, coordinates, id))
     if (class(sg@data[,i]) != 'character'){
       # not including strings
-      varName = paste(varNameList[i],'_sl',sep='')
+      var.name = paste(var.nameList[i],'_sl',sep='')
       for (j in seq(dimSg[1])){ 
         # loop through the cells
-        sg@data[j,varName] = mean(sg@data[neighs[[j]],i])
+        sg@data[j,var.name] = mean(sg@data[neighs[[j]],i])
         # I think a better way to do this is using one of the apply functions
       }
     }
@@ -688,22 +660,22 @@ spatialLag = function(sg){
   return (sg)
 }
 
-processRaster = function(sg,rasterData = theData){
+processRaster = function(sg,data.raster = data.current){
   # process raster data
   # determine the average of the values within the grid cell
   
-  dataName = attr(rasterData,'varName')
-  fileType = attr(rasterData,'fileType')
+  data.name = attr(data.raster,'var.name')
+  file.type = attr(data.raster,'file.type')
   
   # projection
-  rasterData = projectRaster(rasterData,crs=CRS(proj4string(sg)))
+  data.raster = projectRaster(data.raster,crs=CRS(proj4string(sg)))
   
   # clip raster to grid
   cropbox = extent(sg)
-  rasterData = crop(rasterData,cropbox)
+  data.raster = crop(data.raster,cropbox)
   
   # extract heat values for each cell from raster
-  cell_vals = extract(rasterData,sg)
+  cell_vals = extract(data.raster,sg)
   cell = list()
   # Use list apply to calculate mean for each grid cell
   cell$mean = lapply(cell_vals, FUN=mean, na.rm=TRUE)
@@ -717,28 +689,28 @@ processRaster = function(sg,rasterData = theData){
   # append to datastructure
   funs = c('mean','max', 'min')
   for (fun in funs){
-    newVar = paste(dataName,'_',fun,sep='')
+    newVar = paste(data.name,'_',fun,sep='')
     sg@data[newVar] = 0*nrow(sg)
     sg@data[,newVar] = cell[fun]
   }
   # writes to shapefile
-  # writeOGR(sg,workDir, 'raster_test', driver = 'ESRI Shapefile')
+  # writeOGR(sg,dir.work, 'raster_test', driver = 'ESRI Shapefile')
   # writes to csv
   # write.csv(sg@data,paste(outputFileName,'.csv',''))
   return(sg)
 }
 
-categoriseRaster = function(sg,rasterData = theData,database){
+categoriseRaster = function(sg,data.raster = data.current,database){
   # process raster data
   # determine the average of the values within the grid cell
   
-  dataName = attr(rasterData,'varName')
-  fileType = attr(rasterData,'fileType')
+  data.name = attr(data.raster,'var.name')
+  file.type = attr(data.raster,'file.type')
   
   # this function takes a long time.
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
-  gridded_raster_filename = paste('Data/',dataName,'_gridsize_',gridSize,'.RData',sep='')
+  gridded_raster_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_raster_filename)
   print('grid size is:')
   print(gridSize)
@@ -754,25 +726,25 @@ categoriseRaster = function(sg,rasterData = theData,database){
     
     
     # loop through each of the categories in the raster
-    if (strcmp(fileType,'.tif')){
+    if (strcmp(file.type,'.tif')){
       ## PROCESS THE RASTER
       ####
       # get cropbox for raster clip
       cropbox = extent(sg_temp)
-      rasterData = crop(rasterData,cropbox)
+      data.raster = crop(data.raster,cropbox)
       
-      cats = unique(rasterData)
+      cats = unique(data.raster)
     } else {
-      cats = unique(rasterData@data$Color)
+      cats = unique(data.raster@data$Color)
     }
     for (catg in cats){
-      varName = paste(dataName,catg,sep='_')
+      var.name = paste(data.name,catg,sep='_')
       
       ## Create polygons for each land cover
       # this function takes a long time.
       # check if a saved RData file already exists
-      polyName = paste('Data/',varName,'-polygon','.RData',sep='')
-      print(paste('processing ',varName,sep=''))
+      polyName = paste('Data/',var.name,'-polygon','.RData',sep='')
+      print(paste('processing ',var.name,sep=''))
       alreadyProcessed = file.exists(polyName)
       if (alreadyProcessed) {
         # if it does exist, load the data file
@@ -780,15 +752,15 @@ categoriseRaster = function(sg,rasterData = theData,database){
       }  else {
         # extract the raster of just one category
         # create a polygon of the land cover type
-        rast = rasterData
-        if (strcmp(fileType,'.tif')){
+        rast = data.raster
+        if (strcmp(file.type,'.tif')){
           rast[rast != catg] = NA
           sf = gdal_polygonizeR(rast)
         } else {
-          #           sf = rasterData
-          #           sf@data = rasterData@data[rasterData@data$Color == catg]
-          sf = SpatialPolygons(rasterData@polygons)[rasterData@data$Color == catg]
-          proj4string(sf) = proj4string(rasterData)
+          #           sf = data.raster
+          #           sf@data = data.raster@data[data.raster@data$Color == catg]
+          sf = SpatialPolygons(data.raster@polygons)[data.raster@data$Color == catg]
+          proj4string(sf) = proj4string(data.raster)
           # print(catg)
           # plot(sf)
         }
@@ -799,7 +771,7 @@ categoriseRaster = function(sg,rasterData = theData,database){
       
       
       # determine the area in each grid of the raster and append to grid
-      sg_temp = areaInGrid(sg_temp,sf,varName,database,TRUE)
+      sg_temp = areaInGrid(sg_temp,sf,var.name,database,TRUE)
     }
     ## SAVE CATEGORISED RASTER
     ####
@@ -813,25 +785,25 @@ categoriseRaster = function(sg,rasterData = theData,database){
   sg@data = cbind(sg@data, sg_temp@data)
   
   # writes to shapefile
-  # writeOGR(sg,workDir, 'raster_test', driver = 'ESRI Shapefile')
+  # writeOGR(sg,dir.work, 'raster_test', driver = 'ESRI Shapefile')
   # writes to csv
   # write.csv(sg@data,paste(outputFileName,'.csv',''))
   return(sg)
 }
 
-geostat = function(sg,pointData = theData){
+geostat = function(sg,data.point = data.current){
   # this function processes geostatistical data
   # it returns the min, max, median, and mean of the point geostat data
   
-  dataName = attr(pointData,'varName')
-  fileType = attr(pointData,'fileType')
+  data.name = attr(data.point,'var.name')
+  file.type = attr(data.point,'file.type')
   
-  if (fileType == ".csv"){
-    pointData = csvToSpatial(pointData)
+  if (file.type == ".csv"){
+    data.point = csvToSpatial(data.point)
   }
   # projection
-  if (proj4string(sg) != proj4string(pointData)){
-    pointData = spTransform(pointData,CRS(proj4string(sg)))
+  if (proj4string(sg) != proj4string(data.point)){
+    data.point = spTransform(data.point,CRS(proj4string(sg)))
     # print(sf)
   }
   
@@ -841,7 +813,7 @@ geostat = function(sg,pointData = theData){
   # initialise data
   funs = c('mean','max', 'min','median')
   for (fun in funs){
-    newVar = paste(dataName,'_',fun,sep='')
+    newVar = paste(data.name,'_',fun,sep='')
     sg@data[newVar] = 0*nrow(sg)
   }
   
@@ -849,15 +821,15 @@ geostat = function(sg,pointData = theData){
   for (j in sg@data$cId){
     # get the grid cell
     p1 = grid_cells[j]
-    proj4string(p1) = proj4string(pointData)
+    proj4string(p1) = proj4string(data.point)
     # get sub points
-    sub_points = pointData[p1,]
+    sub_points = data.point[p1,]
     vals = strtoi(sub_points@data[,1])
     # loop through the functions
-    sg@data[j, paste(dataName,'_mean',sep='')] = mean(vals, na.rm=TRUE)
-    sg@data[j, paste(dataName,'_median',sep='')] = median(vals, na.rm=TRUE)
-    sg@data[j, paste(dataName,'_max',sep='')] = max(vals, na.rm=TRUE)
-    sg@data[j, paste(dataName,'_min',sep='')] = min(vals, na.rm=TRUE)
+    sg@data[j, paste(data.name,'_mean',sep='')] = mean(vals, na.rm=TRUE)
+    sg@data[j, paste(data.name,'_median',sep='')] = median(vals, na.rm=TRUE)
+    sg@data[j, paste(data.name,'_max',sep='')] = max(vals, na.rm=TRUE)
+    sg@data[j, paste(data.name,'_min',sep='')] = min(vals, na.rm=TRUE)
     
   }
   

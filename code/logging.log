@@ -1,3 +1,202 @@
-2018-01-17 10:13:33,223 __main__        INFO     MainProcess hi
-2018-01-17 10:13:54,384 __main__        DEBUG    MainProcess hi
-2018-01-17 10:14:03,069 __main__        ERROR    MainProcess hi
+2018-02-07 09:12:58,729 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20150817_20170226_01_T1
+2018-02-07 09:12:58,730 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:12:58,735 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:49,622 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:49,645 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:49,647 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:49,667 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:49,682 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:49,701 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:49,740 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:49,750 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:49,864 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:49,872 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:49,893 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:49,917 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:49,940 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:49,964 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:49,988 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:50,000 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:50,011 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20170907_20170926_01_T1
+2018-02-07 09:13:50,013 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:13:50,020 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:51,673 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:51,709 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:51,713 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:51,730 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:51,747 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:51,767 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:51,802 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:51,813 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:51,945 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:51,956 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:51,979 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:52,004 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:52,031 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:52,058 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:52,084 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:52,099 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:52,110 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20170822_20170912_01_T1
+2018-02-07 09:13:52,112 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:13:52,123 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:53,691 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:53,719 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:53,722 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:53,739 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:53,756 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:53,777 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:53,811 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:53,822 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:53,970 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:53,980 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:54,003 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:54,028 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:54,054 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:54,080 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:54,107 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:54,121 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:54,133 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20170518_20170525_01_T1
+2018-02-07 09:13:54,135 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:13:54,144 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:55,677 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:55,712 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:55,715 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:55,732 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:55,749 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:55,770 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:55,805 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:55,816 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:55,943 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:55,953 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:55,976 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:56,002 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:56,028 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:56,055 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:56,081 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:56,095 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:56,106 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20160718_20170222_01_T1
+2018-02-07 09:13:56,108 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:13:56,119 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:57,686 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:57,718 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:57,721 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:57,738 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:57,755 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:57,776 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:57,834 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:57,845 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:57,965 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:57,975 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:57,998 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:58,028 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:58,053 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:58,080 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:58,106 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:58,121 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:58,131 __main__        INFO     MainProcess Processing image LC08_L1TP_015033_20160702_20170222_01_T1
+2018-02-07 09:13:58,133 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:13:58,145 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:13:59,692 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:13:59,727 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:13:59,730 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:13:59,748 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:13:59,765 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:13:59,786 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:13:59,820 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:59,832 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:13:59,953 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:59,962 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:13:59,985 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:00,011 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:00,038 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:00,065 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:00,091 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:00,105 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:00,116 __main__        INFO     MainProcess Processing image LC08_L1GT_111211_20170908_20170926_01_T2
+2018-02-07 09:14:00,118 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:14:00,131 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:14:01,663 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:14:01,688 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:01,691 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:14:01,709 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:14:01,725 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:14:01,746 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:14:01,781 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:01,792 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:14:01,900 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:01,910 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:01,932 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:01,955 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:01,977 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:02,001 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:02,026 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:02,042 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:02,053 __main__        INFO     MainProcess Processing image LC08_L1GT_111211_20160905_20170321_01_T2
+2018-02-07 09:14:02,055 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:14:02,067 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:14:03,614 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:14:03,644 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:03,647 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:14:03,665 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:14:03,681 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:14:03,702 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:14:03,737 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:03,748 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:14:03,858 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:03,868 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:03,889 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:03,913 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:03,936 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:03,960 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:03,985 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:04,001 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:04,012 __main__        INFO     MainProcess Processing image LC08_L1GT_111211_20160820_20170322_01_T2
+2018-02-07 09:14:04,013 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:14:04,024 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:14:05,594 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:14:05,621 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,624 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:14:05,641 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:14:05,658 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:14:05,681 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:14:05,717 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:05,729 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:14:05,848 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:05,858 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:05,881 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,904 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,928 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,951 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,976 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:05,992 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:06,003 __main__        INFO     MainProcess Processing image LC08_L1GT_111211_20160804_20170322_01_T2
+2018-02-07 09:14:06,005 __main__        INFO     MainProcess Reading metadata
+2018-02-07 09:14:06,014 __main__        INFO     MainProcess Clipping geographic data if necessary
+2018-02-07 09:14:07,552 __main__        INFO     MainProcess Starting LST calculations
+2018-02-07 09:14:07,588 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,592 __main__        INFO     MainProcess Determining emissivity map
+2018-02-07 09:14:07,609 __main__        INFO     MainProcess LC tif size: (812, 684)
+2018-02-07 09:14:07,626 __main__        INFO     MainProcess calculating satellite temperature
+2018-02-07 09:14:07,646 __main__        INFO     MainProcess making the atmospheric correction
+2018-02-07 09:14:07,681 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:07,693 __main__        INFO     MainProcess Calculating the ndvi
+2018-02-07 09:14:07,819 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:07,829 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:07,850 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,873 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,896 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,920 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,946 __main__        INFO     MainProcess Calculating TOAr
+2018-02-07 09:14:07,963 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:07,975 __main__        INFO     MainProcess Calculating the mean: bal, lst, day
+2018-02-07 09:14:08,015 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:08,024 __main__        INFO     MainProcess Calculating the mean: bal, ndvi, day
+2018-02-07 09:14:08,067 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:08,076 __main__        INFO     MainProcess Calculating the mean: bal, albedo, day
+2018-02-07 09:14:08,118 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:08,130 __main__        INFO     MainProcess Calculating the mean: bal, lst, night
+2018-02-07 09:14:08,158 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:08,167 __main__        INFO     MainProcess Calculating the mean: bal, ndvi, night
+2018-02-07 09:14:08,196 __main__        INFO     MainProcess Calculating the albedo
+2018-02-07 09:14:08,204 __main__        INFO     MainProcess Calculating the mean: bal, albedo, night
+2018-02-07 09:14:08,234 __main__        INFO     MainProcess Calculating the albedo

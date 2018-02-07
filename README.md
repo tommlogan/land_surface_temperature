@@ -76,7 +76,9 @@ This actually occurs during the code `clip_geographic_data.R` which is called du
 
 ## 3 Grid data for analysis
   1. Use the code from www.github.com/tommlogan/spatial_data_discretiser
-  2.
+  2. add information into the file `code/processing/data_to_grid.csv`
+  3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
+  4. run the code with the input 'data_to_grid.csv'
 
 
 ## 2. Statistical inference on the dataset:
