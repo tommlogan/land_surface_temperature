@@ -20,6 +20,8 @@ I'd like to add three cities from non-industrialized countries to see if the res
 
 ## Steps:
 1. Process the LandSat images to land surface temperatures
+2. Prepare other images (tree canopy, land cover, impervious surface)
+3. Grid the data for analysis as necessary
 2. Statistical analysis
 
 ## 1. LandSat images to LST, albedo, and NDVI:
@@ -67,11 +69,14 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is done within `L8_processing.py`
 
   This is a plot of the mean LST for Baltimore
-    ![image](fig/map/lst_day_mean.jpg){:width="50%"}
+    ![image](fig/map/lst_day_mean.jpg)
 
+## 2 Prepare land cover, tree canopy, impervious surface data
+This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
 
-#### 1.5 Grid data for analysis
-  1. df
+## 3 Grid data for analysis
+  1. Use the code from www.github.com/tommlogan/spatial_data_discretiser
+  2.
 
 
 ## 2. Statistical inference on the dataset:
