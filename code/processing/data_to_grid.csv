@@ -1,9 +1,9 @@
-Path,FileName,City,varName,Description,fileType,dataType
-processed,bal_boundary,bal,city,city boundary,.shp,areaLevel
-processed/image,lst_mean_day,bal,lst_mean_day,land surface temperature,.tif,raster
-processed/image,lst_mean_night,bal,lst_mean_night,land surface temperature,.tif,raster
-processed/image,albedo_mean_day,bal,alb_mean,albedo,.tif,raster
-processed/image,ndvi_mean_day,bal,ndvi_mean,vegetation index,.tif,raster
-processed,LCD2011_LC_bal,bal,lc,National land cover database 2011,.tif,raster
-processed,LCD2011_CAN_bal,bal,tree,tree canopy cover,.tif,raster
-processed,LCD2011_IMP_bal,bal,imp,impervious surface percent,.tif,raster
+Path,FileName,City,varName,Description,fileType,dataType,projection_epsg
+processed,bal_boundary,bal,city,city boundary,.shp,areaLevel,26985
+processed/image,lst_mean_day,bal,lst_mean_day,land surface temperature,.tif,raster,26985
+processed/image,lst_mean_night,bal,lst_mean_night,land surface temperature,.tif,raster,26985
+processed/image,albedo_mean_day,bal,alb_mean,albedo,.tif,raster,26985
+processed/image,ndvi_mean_day,bal,ndvi_mean,vegetation index,.tif,raster,26985
+processed,LCD2011_LC_bal,bal,lc,National land cover database 2011,.tif,raster,26985
+processed,LCD2011_CAN_bal,bal,tree,tree canopy cover,.tif,raster,26985
+processed,LCD2011_IMP_bal,bal,imp,impervious surface percent,.tif,raster,26985

@@ -24,7 +24,7 @@ I'd like to add three cities from non-industrialized countries to see if the res
 3. Grid the data for analysis as necessary
 2. Statistical analysis
 
-## 1. LandSat images to LST, albedo, and NDVI:
+### 1. LandSat images to LST, albedo, and NDVI:
 
 #### 1.1 Download the satellite images
 I selected the most recent four/five images per city and day/night where there was no cloud cover over the city of interest.
@@ -71,76 +71,32 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is a plot of the mean LST for Baltimore
     ![image](fig/map/lst_day_mean.jpg)
 
-## 2 Prepare land cover, tree canopy, impervious surface data
+### 2 Prepare land cover, tree canopy, impervious surface data
 This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
 
-## 3 Grid data for analysis
-  1. Use the code from www.github.com/tommlogan/spatial_data_discretiser
+### 3 Grid data for analysis
+  1. I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `code/processing/discritiser.R`
   2. add information into the file `code/processing/data_to_grid.csv`
   3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
-  4. run the code with the input 'data_to_grid.csv'
+  4. run the code's function `main` with the input 'data_to_grid.csv'
 
+### 4 Exploratory data analysis
+  1. I'm going to test Jupyter notebook for this...
 
-## 2. Statistical inference on the dataset:
+### 5 Statistical inference on the dataset:
 
 TBD
 
-## Markdown Cheatsheet
-*markdown cheat sheet: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet*
+## Cook book: Variable descriptions
 
-#### Temporary example markdown:
+    Table 1: variables collected and their units
 
-    An indent will write in code
-
-1. Lists
-
-    Note: use tabs to indent new writing
-
-3. Write code chunks
-
-    Here is some Python code:
-
-    ```python
-    >>> print("Hello world!")
-    Hello world!
-    ```
-
-    ```R
-    >>> for (i in x){
-    Hello world!
-        }
-    ```
-
-4. Install ipymd:
-
-    To install the latest release version:
-
-    ```shell
-    pip install ipymd
-    ```
-
-    Alternatively, to install the development version:
-
-    ```shell
-    pip install git+https://github.com/rossant/ipymd
-    ```
-
-6. Images
-
-    Add an image like this
-
-    ![image](https://cloud.githubusercontent.com/assets/1942359/5570181/f656a484-8f7d-11e4-8ec2-558d022b13d3.png)
-
-7. Checkboxes
-    * [ ] Checkboxes are available for issues or steps
-    * [x] You can click it in the markdown preview
-
-5. Tables
-
-    Table 1: example table
-
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
+| var-name      | Description   | Unit  |
+| ------------- |:-------------| -----:|
+| lst_day_mean  | land surface temperature during the day (averaged over different images ) | oC |
+| lst_night_mean  | as above, but night images      |   oC |
+| alb_mean | albedo during the day, averaged over different images      |    an index (divide by 100 to normalize) |
+| ndvi_mean | vegetation index during the day, averaged over different images    |    |
+| tree | tree canopy cover   |     |
+| imp | % impervious surface |   % [0,1] |
+| lc_# | area within grid cell that is of land cover type #      | m2 |

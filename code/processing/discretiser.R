@@ -180,9 +180,9 @@ ImportData = function(database.row){
   } else { # .csv
     data.current = read.csv(file.name,header=T,fill = T,stringsAsFactors=FALSE)
   }
-  attr(data.current,'data.type') = database.row$data.type
-  attr(data.current,'var.name') = database.row$var.name
-  attr(data.current,'file.type') = database.row$file.type
+  attr(data.current,'data.type') = database.row$dataType
+  attr(data.current,'var.name') = database.row$varName
+  attr(data.current,'file.type') = database.row$fileType
   attr(data.current,'file.name') = database.row$FileName
   
   return (data.current)
