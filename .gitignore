@@ -18,3 +18,5 @@ figs
 *.aprx
 *.pagx
 maps
+*.pyc
+**/_pycache_
