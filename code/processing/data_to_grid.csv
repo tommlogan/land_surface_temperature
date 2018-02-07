@@ -1,7 +1,7 @@
 Path,FileName,City,varName,Description,fileType,dataType,projection_epsg
 processed,bal_boundary,bal,city,city boundary,.shp,areaLevel,26985
-processed/image,lst_mean_day,bal,lst_mean_day,land surface temperature,.tif,raster,26985
-processed/image,lst_mean_night,bal,lst_mean_night,land surface temperature,.tif,raster,26985
+processed/image,lst_mean_day,bal,lst_day_mean,land surface temperature,.tif,raster,26985
+processed/image,lst_mean_night,bal,lst_night_mean,land surface temperature,.tif,raster,26985
 processed/image,albedo_mean_day,bal,alb_mean,albedo,.tif,raster,26985
 processed/image,ndvi_mean_day,bal,ndvi_mean,vegetation index,.tif,raster,26985
 processed,LCD2011_LC_bal,bal,lc,National land cover database 2011,.tif,raster,26985
