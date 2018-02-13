@@ -35,6 +35,9 @@ library(pracma)
 library(maptools)
 library(parallel)
 no_cores <<- floor(detectCores() - 6) # Calculate the number of cores
+kPathGriddedData <- file.path('data', 'processed', 'grid')
+kPathDataSource <- file.path('code','processing')
+kPathDataTemp <- file.path('data','intermediate')
 
 main = function(data.fn,a=1){
   #######
@@ -49,7 +52,7 @@ main = function(data.fn,a=1){
   ####
   ## Import the data source catalogue
   ####
-  dir.data <- file.path(getwd(), 'code','processing', data.fn)
+  dir.data <- file.path(kPathDataSource, data.fn)
   database <- read.csv(dir.data,header=T,fill = T,stringsAsFactors=FALSE)
   database <- database[!apply(is.na(database) | database == "", 1, all), ]
   
@@ -121,7 +124,8 @@ main = function(data.fn,a=1){
   ####
   today = Sys.Date()
   date_str = format(today,format="%Y-%m-%d")
-  dir.save = file.path(getwd(), 'data', 'processed', 'grid', city.name, date_str)
+  dir.save = file.path(kPathGriddedData, city.name, date_str)
+  dir.create(file.path(kPathGriddedData, city.name))
   dir.create(dir.save)
   setwd(dir.save)
   # what is the output filename?
@@ -295,7 +299,7 @@ areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
   if (to_save){
     # check if a saved RData file already exists
     gridSize = attr(sg,'grid_size')
-    gridded_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+    gridded_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
     alreadyProcessed = file.exists(gridded_filename)
     
     if (alreadyProcessed) {
@@ -382,7 +386,7 @@ areaCount = function(sg,sf=data.current,database){
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
   data.name = attr(sf,'var.name')
-  gridded_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+  gridded_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_filename)
   
   if (alreadyProcessed) {
@@ -700,7 +704,7 @@ processRaster = function(sg,data.raster = data.current){
   return(sg)
 }
 
-categoriseRaster = function(sg,data.raster = data.current,database){
+categoriseRaster = function(sg, data.raster = data.current, database){
   # process raster data
   # determine the average of the values within the grid cell
   
@@ -710,7 +714,7 @@ categoriseRaster = function(sg,data.raster = data.current,database){
   # this function takes a long time.
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
-  gridded_raster_filename = paste('Data/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+  gridded_raster_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_raster_filename)
   print('grid size is:')
   print(gridSize)
@@ -743,7 +747,7 @@ categoriseRaster = function(sg,data.raster = data.current,database){
       ## Create polygons for each land cover
       # this function takes a long time.
       # check if a saved RData file already exists
-      polyName = paste('Data/',var.name,'-polygon','.RData',sep='')
+      polyName = paste(kPathDataTemp, '/',var.name,'-polygon','.RData',sep='')
       print(paste('processing ',var.name,sep=''))
       alreadyProcessed = file.exists(polyName)
       if (alreadyProcessed) {
