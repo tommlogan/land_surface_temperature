@@ -17,7 +17,7 @@ library(raster)
 library(rgeos)
 
 
-main <- function(city, landsat_id, fn_land_cover, fn_city_boundary, bands){
+main <- function(city, landsat_id, fn_land_cover, fn_tree, fn_imperv, fn_city_boundary, bands){
   # reads in the arguments passed
   
   # import city boundary
@@ -31,7 +31,13 @@ main <- function(city, landsat_id, fn_land_cover, fn_city_boundary, bands){
   }
   
   # import land cover image and clip to city buffer
-  landcover.city <- clip_land_cover(city.buffer, fn_land_cover, satellite.city)
+  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'LC')
+  
+  # import tree canopy image and clip to cify buffer
+  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'CAN')
+  
+  # import impervious surface image and clip to cify buffer
+  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'IMP')
   
 }
 
@@ -112,10 +118,10 @@ clip_satellite <- function(city.buffer, landsat_id, band){
 }
 
 
-clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
+clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city, cover_type){
   # import the land cover image, clip it to the city, and save it
-  print('importing land cover')
-  path.landcover <- file.path('data','intermediate',city, paste0('NLCD2011_LC_', city, '.tif'))
+  print(paste0('importing ', cover_type))
+  path.landcover <- file.path('data','processed',city, paste0('NLCD2011_',cover_type,'_', city, '.tif'))
   
   # check if processed already
   alreadyProcessed = file.exists(path.landcover)
@@ -132,7 +138,7 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
     
     # nearest neighbor resample
     print('resample')
-    landcover.city <- resample(landcover.all, satellite.proj, 'ngb')
+    landcover.city <- resample(landcover.all, satellite.proj, method = 'ngb')
     
     # crop and mask
     print('crop and mask')
@@ -146,7 +152,7 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city){
     
     # repeat now that's in the correct projection
     print('resample')
-    landcover.city <- resample(landcover.city, satellite.city, 'ngb')
+    landcover.city <- resample(landcover.city, satellite.city, method = 'ngb')
     
     # crop and mask
     print('crop and mask')
@@ -166,6 +172,8 @@ landsat_id <- args.passed[2]
 fn_land_cover <- args.passed[3]
 fn_city_boundary <- args.passed[4]
 bands <- args.passed[5]
+fn_tree <- args.passed[6]
+fn_imperv <- args.passed[7]
 # # temporary - during writing
 # city <- 'bal'
 # fn_city_boundary <- 'tl_2012_24510_faces'
@@ -173,5 +181,5 @@ bands <- args.passed[5]
 # landsat_id <- 'LC08_L1TP_015033_20170907_20170926_01_T1'
 
 # run main
-main(city, landsat_id, fn_land_cover, fn_city_boundary, bands)
+main(city, landsat_id, fn_land_cover, fn_tree, fn_imperv, fn_city_boundary, bands)
 

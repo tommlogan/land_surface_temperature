@@ -136,6 +136,8 @@ def clip_geographic_data(info_satellite, source_city):
             images saved in /data/intermediate
             satellite
             land cover
+            tree canopy
+            impervious surface
     '''
     logger.info('Clipping geographic data if necessary')
     # Define command
@@ -148,10 +150,12 @@ def clip_geographic_data(info_satellite, source_city):
     # filename arguments
     landsat_product_id = info_satellite['landsat_product_id']
     fn_land_cover = source_city['land_cover'][city_idx].values[0]
+    fn_tree_canopy = source_city['tree_canopy'][city_idx].values[0]
+    fn_impervious_surface = source_city['impervious'][city_idx].values[0]
     fn_boundary = source_city['city_parcels'][city_idx].values[0]
     bands = '1,2,3,4,5,10'
     # args into list
-    args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands]
+    args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands, fn_tree_canopy, fn_impervious_surface]
 
     # Build subprocess command
     cmd = [command, path2script] + args_clip

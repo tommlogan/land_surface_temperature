@@ -20,9 +20,11 @@ I'd like to add three cities from non-industrialized countries to see if the res
 
 ## Steps:
 1. Process the LandSat images to land surface temperatures
+2. Prepare other images (tree canopy, land cover, impervious surface)
+3. Grid the data for analysis as necessary
 2. Statistical analysis
 
-## 1. LandSat images to LST, albedo, and NDVI:
+### 1. LandSat images to LST, albedo, and NDVI:
 
 #### 1.1 Download the satellite images
 I selected the most recent four/five images per city and day/night where there was no cloud cover over the city of interest.
@@ -67,73 +69,37 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is done within `L8_processing.py`
 
   This is a plot of the mean LST for Baltimore
-    ![image](fig/map/lst_day_mean.jpg){:width="50%"}
+    ![image](fig/map/lst_day_mean.jpg)
+
+### 2 Prepare land cover, tree canopy, impervious surface data
+This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
+
+### 3 Grid data for analysis
+  1. I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `code/processing/discritiser.R`
+  2. add information into the file `code/processing/data_to_grid.csv`
+  3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
+  4. run the code's function `main('data_to_grid.csv')`
+  5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area
+
+### 4 Exploratory data analysis
+  1. See the Jupyter notebook `explore.ipynb`
+
+### 5 Statistical inference on the dataset:
+  1. Fit some quick regressions to this data to look at trends and see if there are any patterns or trends emerging
+  2. Look at the variable importance and compare between the diurnal and nocturnal temperatures
 
 
-#### 1.5 Grid data for analysis
-  1. df
 
+## Cook book: Variable descriptions
 
-## 2. Statistical inference on the dataset:
+    Table 1: variables collected and their units
 
-TBD
-
-## Markdown Cheatsheet
-*markdown cheat sheet: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet*
-
-#### Temporary example markdown:
-
-    An indent will write in code
-
-1. Lists
-
-    Note: use tabs to indent new writing
-
-3. Write code chunks
-
-    Here is some Python code:
-
-    ```python
-    >>> print("Hello world!")
-    Hello world!
-    ```
-
-    ```R
-    >>> for (i in x){
-    Hello world!
-        }
-    ```
-
-4. Install ipymd:
-
-    To install the latest release version:
-
-    ```shell
-    pip install ipymd
-    ```
-
-    Alternatively, to install the development version:
-
-    ```shell
-    pip install git+https://github.com/rossant/ipymd
-    ```
-
-6. Images
-
-    Add an image like this
-
-    ![image](https://cloud.githubusercontent.com/assets/1942359/5570181/f656a484-8f7d-11e4-8ec2-558d022b13d3.png)
-
-7. Checkboxes
-    * [ ] Checkboxes are available for issues or steps
-    * [x] You can click it in the markdown preview
-
-5. Tables
-
-    Table 1: example table
-
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
+| var-name      | Description   | Unit  |
+| ------------- |:-------------| -----:|
+| lst_day_mean  | land surface temperature during the day (averaged over different images ) | oC |
+| lst_night_mean  | as above, but night images      |   oC |
+| alb_mean | albedo during the day, averaged over different images      |    an index (divide by 100 to normalize) |
+| ndvi_mean | vegetation index during the day, averaged over different images    |    |
+| tree | tree canopy cover   |     |
+| imp | % impervious surface |   % [0,1] |
+| lc_# | area within grid cell that is of land cover type # (see https://www.mrlc.gov/nlcd11_leg.php for the number definitions)     | m2 |

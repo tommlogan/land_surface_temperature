@@ -17,6 +17,9 @@ figs
 *.aprx
 *.pagx
 maps
-.lnk
+*.pyc
+**/__pycache__
+*.lnk
+venv
 .Rproj.user
 Index
