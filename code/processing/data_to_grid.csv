@@ -4,6 +4,6 @@ processed/image,lst_mean_day,bal,lst_day_mean,land surface temperature,.tif,rast
 processed/image,lst_mean_night,bal,lst_night_mean,land surface temperature,.tif,raster,26985
 processed/image,albedo_mean_day,bal,alb_mean,albedo,.tif,raster,26985
 processed/image,ndvi_mean_day,bal,ndvi_mean,vegetation index,.tif,raster,26985
-processed,NLCD2011_CAN_bal,bal,lcov,National land cover database 2011,.tif,rasterCategory,26985
+processed,NLCD2011_LC_bal,bal,lcov,National land cover database 2011,.tif,rasterCategory,26985
 processed,NLCD2011_CAN_bal,bal,tree,tree canopy cover,.tif,raster,26985
 processed,NLCD2011_IMP_bal,bal,imp,impervious surface percent,.tif,raster,26985

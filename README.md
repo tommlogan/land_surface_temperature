@@ -78,14 +78,17 @@ This actually occurs during the code `clip_geographic_data.R` which is called du
   1. I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `code/processing/discritiser.R`
   2. add information into the file `code/processing/data_to_grid.csv`
   3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
-  4. run the code's function `main` with the input 'data_to_grid.csv'
+  4. run the code's function `main('data_to_grid.csv')`
+  5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area
 
 ### 4 Exploratory data analysis
-  1. I'm going to test Jupyter notebook for this...
+  1. See the Jupyter notebook `explore.ipynb`
 
 ### 5 Statistical inference on the dataset:
+  1. Fit some quick regressions to this data to look at trends and see if there are any patterns or trends emerging
+  2. Look at the variable importance and compare between the diurnal and nocturnal temperatures
 
-TBD
+
 
 ## Cook book: Variable descriptions
 
@@ -99,4 +102,4 @@ TBD
 | ndvi_mean | vegetation index during the day, averaged over different images    |    |
 | tree | tree canopy cover   |     |
 | imp | % impervious surface |   % [0,1] |
-| lc_# | area within grid cell that is of land cover type #      | m2 |
+| lc_# | area within grid cell that is of land cover type # (see https://www.mrlc.gov/nlcd11_leg.php for the number definitions)     | m2 |

@@ -34,7 +34,10 @@ library(spdep)
 library(pracma)
 library(maptools)
 library(parallel)
-no_cores <<- floor(detectCores() - 6) # Calculate the number of cores
+library(spex)
+library(pbapply)
+
+no_cores <<- floor(detectCores() - 4) # Calculate the number of cores
 kPathGriddedData <- file.path('data', 'processed', 'grid')
 kPathDataSource <- file.path('code','processing')
 kPathDataTemp <- file.path('data','intermediate')
@@ -68,11 +71,12 @@ main = function(data.fn,a=1){
   ####
   ## Loop through database. extract file names and data types for each
   ####
-  a = 2 # startRow (useful to change sometimes for debugging)
+  a = 1 # startRow (useful to change sometimes for debugging)
   b = nrow(database) 
   for (i in seq(a,b)){
     # import the data
-    data.current = ImportData(database.row = database[i,])
+    database.row = database[i,]
+    data.current = ImportData(database.row)
     data.type = attr(data.current,'data.type')
     data.name = attr(data.current,'var.name')
     print(paste('processing #',i,': ',attr(data.current,'file.name'),sep=''),row.names = FALSE)
@@ -95,7 +99,7 @@ main = function(data.fn,a=1){
     } else if (data.type == 'raster'){
       sg = processRaster(sg,data.raster = data.current)
     } else if (data.type == 'rasterCategory'){
-      sg = categoriseRaster(sg,data.raster = data.current,database)
+      sg = categoriseRaster(sg, data.raster = data.current, database)
     } else if (data.type == 'areaLevel_Count'){
       sg = areaCount(sg,sf=data.current,database)
     } else if (data.type == 'GeoStat'){  
@@ -156,6 +160,7 @@ main = function(data.fn,a=1){
       writeSpatialShape(sg_write, paste(dir.save,'/',out_name,sep=''))
     } 
   } else {
+    dir.save <- getwd()
     writeOGR(sg,dir.save, outputFileName, driver = 'ESRI Shapefile')
     writeSpatialShape(sg, paste(dir.save,'/',outputFileName,sep=''))
   }
@@ -180,7 +185,7 @@ ImportData = function(database.row){
   } else if (file.type == ".tif"){
     data.current = raster(file.path(file.dir, file.name))
     # project data into meters
-    data.current <- projectRaster(data.current, crs = data.projection)
+    data.current <- projectRaster(data.current, crs = data.projection, method = 'ngb')
   } else { # .csv
     data.current = read.csv(file.name,header=T,fill = T,stringsAsFactors=FALSE)
   }
@@ -704,7 +709,7 @@ processRaster = function(sg,data.raster = data.current){
   return(sg)
 }
 
-categoriseRaster = function(sg, data.raster = data.current, database){
+categoriseRaster = function(sg, data.raster, database){
   # process raster data
   # determine the average of the values within the grid cell
   
@@ -722,14 +727,13 @@ categoriseRaster = function(sg, data.raster = data.current, database){
   if (alreadyProcessed) {
     # if it does exist, load the data file
     load(gridded_raster_filename)
-  }  else { # if not, process the data
+  } else { # if not, process the data
     
     ## CREATE TEMPORARY GRID
     sg_temp = createGrid(gridSize,database)
     attr(sg_temp,'grid_size') = gridSize
     
-    
-    # loop through each of the categories in the raster
+    # identify the categories in the raster
     if (strcmp(file.type,'.tif')){
       ## PROCESS THE RASTER
       ####
@@ -741,42 +745,50 @@ categoriseRaster = function(sg, data.raster = data.current, database){
     } else {
       cats = unique(data.raster@data$Color)
     }
-    for (catg in cats){
-      var.name = paste(data.name,catg,sep='_')
+    
+    # init the dataframe with the categories
+    area.classes <- paste0(data.name, '_',cats)
+    sg_temp@data[,area.classes] <- 0
+  
+    # subset raster
+    rast <- data.raster
+    # rast[rast != catg] <- NA
+    
+    # make a list of the polygons in the grid
+    grid.cells <- SpatialPolygons(sg_temp@polygons)
+    grid.number <- length(grid.cells)
       
-      ## Create polygons for each land cover
-      # this function takes a long time.
-      # check if a saved RData file already exists
-      polyName = paste(kPathDataTemp, '/',var.name,'-polygon','.RData',sep='')
-      print(paste('processing ',var.name,sep=''))
-      alreadyProcessed = file.exists(polyName)
-      if (alreadyProcessed) {
-        # if it does exist, load the data file
-        load(polyName)
-      }  else {
-        # extract the raster of just one category
-        # create a polygon of the land cover type
-        rast = data.raster
-        if (strcmp(file.type,'.tif')){
-          rast[rast != catg] = NA
-          sf = gdal_polygonizeR(rast)
-        } else {
-          #           sf = data.raster
-          #           sf@data = data.raster@data[data.raster@data$Color == catg]
-          sf = SpatialPolygons(data.raster@polygons)[data.raster@data$Color == catg]
-          proj4string(sf) = proj4string(data.raster)
-          # print(catg)
-          # plot(sf)
+    raster_area_in_poly = function(j){
+        # subset raster to grid cell
+        p1 = grid.cells[j]
+        proj4string(p1) = proj4string(rast)
+        r.cell = mask(rast, p1)
+        
+        # get areas
+        rast.area <- tapply(raster::area(r.cell), r.cell[], sum)
+        if (length(rast.area) == 0){
+          rast.area <- array(0, dim = c(length(cats)))
+          names(rast.area) <- cats
         }
         
-        
-        save(sf, file = polyName)
-      }
-      
-      
-      # determine the area in each grid of the raster and append to grid
-      sg_temp = areaInGrid(sg_temp,sf,var.name,database,TRUE)
+      return(rast.area)
     }
+    
+    # parallelise
+    cl <- makeCluster(no_cores,outfile="")
+    clusterExport(cl, c("rast","grid.cells","raster_area_in_poly"), envir=environment())
+    clusterEvalQ(cl, c(library(raster)))
+    area.list = pblapply(seq(1,grid.number),function(j) raster_area_in_poly(j))#, cl = cl)
+    stopCluster(cl)
+    
+    # add new covariate to dataframe
+    for (g in seq(1,grid.number)){
+      area.g <- area.list[[g]]
+      area.classes <- names(area.g)
+      area.classes <- paste0(data.name, '_',names(area.g))
+      sg_temp@data[g, area.classes] <- area.g
+    }
+      
     ## SAVE CATEGORISED RASTER
     ####
     # remove excess fields
@@ -794,6 +806,9 @@ categoriseRaster = function(sg, data.raster = data.current, database){
   # write.csv(sg@data,paste(outputFileName,'.csv',''))
   return(sg)
 }
+
+
+
 
 geostat = function(sg,data.point = data.current){
   # this function processes geostatistical data
@@ -841,38 +856,3 @@ geostat = function(sg,data.point = data.current){
   return(sg)
 }
 
-
-gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
-                             pypath=NULL, readpoly=TRUE, quiet=TRUE) {
-  ## a function from https://johnbaumgartner.wordpress.com/2012/07/26/getting-rasters-into-shape-from-r/
-  if (isTRUE(readpoly)) require(rgdal)
-  if (is.null(pypath)) {
-    pypath <- Sys.which('gdal_polygonize.py')
-  }
-  if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
-  owd <- getwd()
-  on.exit(setwd(owd))
-  setwd(dirname(pypath))
-  if (!is.null(outshape)) {
-    outshape <- sub('\\.shp$', '', outshape)
-    f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
-    if (any(f.exists))
-      stop(sprintf('File already exists: %s',
-                   toString(paste(outshape, c('shp', 'shx', 'dbf'),
-                                  sep='.')[f.exists])), call.=FALSE)
-  } else outshape <- tempfile()
-  if (is(x, 'Raster')) {
-    require(raster)
-    writeRaster(x, {f <- tempfile(fileext='.tif')})
-    rastpath <- normalizePath(f)
-  } else if (is.character(x)) {
-    rastpath <- normalizePath(x)
-  } else stop('x must be a file path (character string), or a Raster object.')
-  system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
-                                  pypath, rastpath, gdalformat, outshape)))
-  if (isTRUE(readpoly)) {
-    shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
-    return(shp)
-  }
-  return(NULL)
-}

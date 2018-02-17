@@ -21,3 +21,4 @@ maps
 **/__pycache__
 *.lnk
 venv
+.Rproj.user

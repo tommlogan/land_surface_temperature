@@ -138,7 +138,7 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city, cover_ty
     
     # nearest neighbor resample
     print('resample')
-    landcover.city <- resample(landcover.all, satellite.proj, 'ngb')
+    landcover.city <- resample(landcover.all, satellite.proj, method = 'ngb')
     
     # crop and mask
     print('crop and mask')
@@ -152,7 +152,7 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city, cover_ty
     
     # repeat now that's in the correct projection
     print('resample')
-    landcover.city <- resample(landcover.city, satellite.city, 'ngb')
+    landcover.city <- resample(landcover.city, satellite.city, method = 'ngb')
     
     # crop and mask
     print('crop and mask')
