@@ -31,7 +31,7 @@ from osgeo import gdal_array
 from osgeo import osr
 import shapefile
 from matplotlib import pyplot as plt
-from rpy2.robjects.packages import importr
+# from rpy2.robjects.packages import importr
 import subprocess
 import os
 os.chdir('F:/UrbanDataProject/land_surface_temperature')
@@ -62,7 +62,7 @@ def main():
         for day_night in ['day', 'night']:
             # loop day and night
             # filter the source_satellite df for the images which I'll then mean
-            images_meta = source_satellite.loc[(source_satellite['city'] == city) & (source_satellite['day_night'] == day_night)]
+            images_meta = source_satellite.loc[(source_satellite['city'] == city) & (source_satellite['day_night'] == day_night) & source_satellite['include']]
             # average images
             image_mean(images_meta, day_night, city)
 
@@ -181,6 +181,14 @@ def calc_LST(info_satellite, meta_dict, source_city):
     # conversion to TOA radiance
     TOA = calc_TOA(dn, meta_dict, 10)
 
+    # write thermal radiance to tif
+    TOA_write = TOA.copy()
+    import code
+    # code.interact(local=locals())
+    TOA_write[TOA_write < 0] = np.nan
+    fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(city, 'thermal-radiance', info_satellite['date'], info_satellite['day_night'])
+    array_to_raster(TOA_write, fn_out, image_b10)
+
     # emissivity correction
     emissivity = determine_emissivity(info_satellite, dn, source_city)
 
@@ -258,10 +266,10 @@ def calc_satellite_temperature(TOA, meta_dict, emissivity):
     logger.info('calculating satellite temperature')
 
     # spectral radiance
-    L_lambda = TOA/emissivity
+    L_lam = TOA/emissivity
 
     # calculate the satellite brightness
-    temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log(1 + (meta_dict['K1_CONSTANT_BAND_10']/L_lambda)))
+    temp_satellite = meta_dict['K2_CONSTANT_BAND_10']/(np.log(1 + (meta_dict['K1_CONSTANT_BAND_10']/L_lam)))
 
     return temp_satellite
 
@@ -397,7 +405,7 @@ def image_mean(images_meta, day_night, city):
         save
     '''
     # loop through the image types
-    image_types = ['lst', 'ndvi', 'albedo']
+    image_types = ['lst', 'ndvi', 'albedo', 'thermal-radiance']
     for image_type in image_types:
         logger.info('Calculating the mean: {}, {}, {}'.format(city, image_type, day_night))
         # create a dict for the images

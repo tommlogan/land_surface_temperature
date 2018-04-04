@@ -71,11 +71,13 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is a plot of the mean LST for Baltimore
     ![image](fig/map/lst_day_mean.jpg)
 
+
+
 ### 2 Prepare land cover, tree canopy, impervious surface data
 This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
 
 ### 3 Grid data for analysis
-  1. I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `code/processing/discritiser.R`
+I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `code/processing/discritiser.R`
   2. add information into the file `code/processing/data_to_grid.csv`
   3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
   4. run the code's function `main('data_to_grid.csv')`

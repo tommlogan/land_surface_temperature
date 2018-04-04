@@ -7,3 +7,6 @@ processed/image,ndvi_mean_day,bal,ndvi_mean,vegetation index,.tif,raster,26985
 processed,NLCD2011_LC_bal,bal,lcov,National land cover database 2011,.tif,rasterCategory,26985
 processed,NLCD2011_CAN_bal,bal,tree,tree canopy cover,.tif,raster,26985
 processed,NLCD2011_IMP_bal,bal,imp,impervious surface percent,.tif,raster,26985
+processed/image,thermal-radiance_mean_day,bal,tr_day,thermal radiance,.tif,raster,26985
+processed/image,thermal-radiance_mean_night,bal,tr_nght,thermal radiance,.tif,raster,26985
+processed/image,thermal-radiance_11-Aug-13_day,bal,tr_2013_day,thermal radiance,.tif,raster,26985
