@@ -33,7 +33,7 @@ I selected the most recent four/five images per city and day/night where there w
   2. Enter Search Criteria:
       1. Address/Place - type the city name and state, e.g. 'Baltimore, MD' - click on the correct address and it should appear on the map.
       2. Date Range - we want to use summer dates
-        I'm looking at years 2013-2017 and use months of May (05) - September (09) inclusive
+        I'm looking at years 2013-2017 and use months of May (05/01) - September (so up until 10/01) inclusive
         Need to find images that don't have too much cloud cover.
   3. Data Sets
       1. Select Landsat -> Landsat Collection 1 Level-1 -> Landsat 8 OLI/TIRS C1 Level-1
@@ -49,7 +49,8 @@ I selected the most recent four/five images per city and day/night where there w
       * added to the `data/raw/<city>` directory
   6. Land Cover (NLCD) data for 2011 was downloaded using https://viewer.nationalmap.gov and the state the city is in was downloaded.
   7. Impervious surface and tree canopy was downloaded from https://viewer.nationalmap.gov as well.
-  8. The shapefile of the city was downloaded from [catalog.data.gov](https://catalog.data.gov/dataset?collection_package_id=89f89c6f-741c-4121-98e3-d3f1f528ff53) dataset of city boundaries
+  8. The shapefile of the city was downloaded from [catalog.data.gov](https://catalog.data.gov/dataset?collection_package_id=89f89c6f-741c-4121-98e3-d3f1f528ff53) dataset of city boundaries (for Baltimore, the others were the shapesfiles from green space.)
+  9. The elevation (m) 1/3 arc second as downloaded from the same as 6 and 7. In some cases it had to be unioned: https://support.esri.com/en/technical-article/000015258
 
 #### 1.2 Metadata
   `data_source_satellite.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed. <br>
