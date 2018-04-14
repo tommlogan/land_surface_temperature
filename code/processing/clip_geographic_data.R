@@ -19,7 +19,7 @@ library(rgeos)
 
 main <- function(city, landsat_id, fn.landcover, fn.tree, fn.imperv, fn.cityboundary, bands, fn.elevation){
   # reads in the arguments passed
-  
+
   # import city boundary
   city.buffer <- read_city_boundary(city, fn.cityboundary)
   
@@ -168,7 +168,7 @@ clip_land_cover <- function(city.buffer, fn.landcover, satellite.city, cover_typ
 }
 
 
-clip_land_cover <- function(city.buffer, fn.landcover, satellite.city, cover_type){
+clip_elevation <- function(city.buffer, fn.landcover, satellite.city, cover_type){
   # import the land cover image, clip it to the city, and save it
   print('importing elevation')
   path.landcover <- file.path('data','processed',city, paste0(city, '_', 'elevation', '.tif'))

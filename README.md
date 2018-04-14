@@ -67,14 +67,14 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   3. The final images are saved in `data/processed/image/<city>`
 
 #### 1.4 Calculate mean LST, albedo, NDVI
-  This is done within `L8_processing.py`
+  This is done within running `code/processing/L8_processing.py`
 
   This is a plot of the mean LST for Baltimore
     ![image](fig/map/lst_day_mean.jpg)
 
 
 
-### 2 Prepare land cover, tree canopy, impervious surface data
+### 2 Prepare land cover, tree canopy, impervious surface, elevation data
 This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
 
 ### 3 Grid data for analysis
@@ -82,7 +82,7 @@ I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `cod
   2. add information into the file `code/processing/data_to_grid.csv`
   3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
   4. run the code's function `main('data_to_grid.csv')`
-  5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area
+  5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area - which i've done somewhere...
 
 ### 4 Exploratory data analysis
   1. See the Jupyter notebook `explore.ipynb`

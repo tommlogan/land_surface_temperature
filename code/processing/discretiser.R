@@ -57,112 +57,120 @@ main = function(data.fn,a=1){
   ####
   dir.data <- file.path(kPathDataSource, data.fn)
   database <- read.csv(dir.data,header=T,fill = T,stringsAsFactors=FALSE)
-  database <- database[!apply(is.na(database) | database == "", 1, all), ]
+  database.complete <- database[!apply(is.na(database) | database == "", 1, all), ]
   
   # automate this with a loop later
-  city.name <- 'bal'
-  
-  ####
-  ## Create grid
-  ####
-  sg = createGrid(gridSize,database)
-  attr(sg,'grid_size') = gridSize
-  
-  ####
-  ## Loop through database. extract file names and data types for each
-  ####
-  a = 1 # startRow (useful to change sometimes for debugging)
-  b = nrow(database) 
-  for (i in seq(a,b)){
-    # import the data
-    database.row = database[i,]
-    data.current = ImportData(database.row)
-    data.type = attr(data.current,'data.type')
-    data.name = attr(data.current,'var.name')
-    print(paste('processing #',i,': ',attr(data.current,'file.name'),sep=''),row.names = FALSE)
-    ####
-    ## process the data type appropriately
-    ####
-    if ((strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8)) & !exists("before_ACS"))) {
-      before_ACS = ncol(sg@data)
-    } 
-    if (data.type == 'areaLevel'){
-      sg = areaLevel(sg,data.current)
-    } else if (data.type == 'polyIntersect'){
-      sg = areaInGrid(sg,sf = data.current,data.name,database)
-    } else if (data.type == 'pointCount'){
-      sg = pointPatternCount(sg,data.point = data.current)
-    } else if (data.type == 'pointDistance' || data.type == 'polyDistance'){
-      sg = determineDistance(sg,distData = data.current)
-    } else if (data.type == 'lineLength'){
-      sg = lineLength(sg,data.current)
-    } else if (data.type == 'raster'){
-      sg = processRaster(sg,data.raster = data.current)
-    } else if (data.type == 'rasterCategory'){
-      sg = categoriseRaster(sg, data.raster = data.current, database)
-    } else if (data.type == 'areaLevel_Count'){
-      sg = areaCount(sg,sf=data.current,database)
-    } else if (data.type == 'GeoStat'){  
-      sg = geostat(sg,data.point = data.current)
-    } else {
-      print('WARNING: data type not recognised')
-    }
-    print(i)
-    print(length(sg))
+  cities <- unique(database.complete$City)
+  for (city.name in cities){
+    # get city database
+    database <- database.complete[database.complete$City == city.name,]
+    print(paste0(Sys.time(), ': Beginning to grid the data for ', city.name))
     
-  }
-  
-  ####
-  ## clip to boundary
-  ####
-  sg@data$cId = 1:nrow(sg@data)
-  
-  ####
-  ## spatial lag
-  ####
-  num_vars_pre_spat_lag = ncol(sg@data)
-  sg = spatialLag(sg)
-  
-  ####
-  ## Set the working directory for saving
-  ####
-  today = Sys.Date()
-  date_str = format(today,format="%Y-%m-%d")
-  dir.save = file.path(kPathGriddedData, city.name, date_str)
-  dir.create(file.path(kPathGriddedData, city.name))
-  dir.create(dir.save)
-  setwd(dir.save)
-  # what is the output filename?
-  outputFileName <- paste(tolower(city.name),'_data',sep='')
-  outvar.name <- paste0('data.',tolower(city.name))
-  
-  ####
-  ## save as RData file
-  ####
-  assign(outvar.name, sg@data)
-  save(list = outvar.name, file = paste(outputFileName,'.RData',sep='')) 
-
-  ####
-  ## add to the csv file
-  ####
-  write.csv(sg@data,paste(outputFileName,'.csv',sep=''))
-  
-  ####
-  ## create a shape file
-  ####
-  if (strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8))){
-    write_ints = c(1,seq(before_ACS,ncol(sg@data),by=500),ncol(sg@data))
-    for (i in 2:length(write_ints)){
-      sg_write = sg[write_ints[i-1]:write_ints[i]]
-      out_name = paste(outputFileName,'_',(i-1),sep='')
+    ####
+    ## Create grid
+    ####
+    sg = createGrid(gridSize,database)
+    attr(sg,'grid_size') = gridSize
+    
+    ####
+    ## Loop through database. extract file names and data types for each
+    ####
+    a = 1 # startRow (useful to change sometimes for debugging)
+    b = nrow(database) 
+    for (i in seq(a,b)){
+      # import the data
+      database.row = database[i,]
+      data.current = ImportData(database.row)
+      data.type = attr(data.current,'data.type')
+      data.name = attr(data.current,'var.name')
+      print(paste('processing #',i,': ',attr(data.current,'file.name'),sep=''),row.names = FALSE)
+      ####
+      ## process the data type appropriately
+      ####
+      if ((strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8)) & !exists("before_ACS"))) {
+        before_ACS = ncol(sg@data)
+      } 
+      if (data.type == 'areaLevel'){
+        sg = areaLevel(sg,data.current)
+      } else if (data.type == 'polyIntersect'){
+        sg = areaInGrid(sg,sf = data.current,data.name,database)
+      } else if (data.type == 'pointCount'){
+        sg = pointPatternCount(sg,data.point = data.current)
+      } else if (data.type == 'pointDistance' || data.type == 'polyDistance'){
+        sg = determineDistance(sg,distData = data.current)
+      } else if (data.type == 'lineLength'){
+        sg = lineLength(sg,data.current)
+      } else if (data.type == 'raster'){
+        sg = processRaster(sg,data.raster = data.current)
+      } else if (data.type == 'rasterCategory'){
+        sg = categoriseRaster(sg, data.raster = data.current, database)
+      } else if (data.type == 'areaLevel_Count'){
+        sg = areaCount(sg,sf=data.current,database)
+      } else if (data.type == 'GeoStat'){  
+        sg = geostat(sg,data.point = data.current)
+      } else {
+        print('WARNING: data type not recognised')
+      }
+      print(i)
+      print(length(sg))
       
-      writeOGR(sg_write,dir.save, out_name, driver = 'ESRI Shapefile')
-      writeSpatialShape(sg_write, paste(dir.save,'/',out_name,sep=''))
-    } 
-  } else {
-    dir.save <- getwd()
-    writeOGR(sg,dir.save, outputFileName, driver = 'ESRI Shapefile')
-    writeSpatialShape(sg, paste(dir.save,'/',outputFileName,sep=''))
+    }
+    
+    ####
+    ## clip to boundary
+    ####
+    sg@data$cId = 1:nrow(sg@data)
+    
+    ####
+    ## spatial lag
+    ####
+    num_vars_pre_spat_lag = ncol(sg@data)
+    sg = spatialLag(sg)
+    
+    ####
+    ## Set the working directory for saving
+    ####
+    today = Sys.Date()
+    date_str = format(today,format="%Y-%m-%d")
+    dir.save = file.path(kPathGriddedData, city.name, date_str)
+    dir.create(file.path(kPathGriddedData, city.name))
+    dir.create(dir.save)
+    dir.previous <- getwd()
+    setwd(dir.save)
+    # what is the output filename?
+    outputFileName <- paste(tolower(city.name),'_data',sep='')
+    outvar.name <- paste0('data.',tolower(city.name))
+    
+    ####
+    ## save as RData file
+    ####
+    assign(outvar.name, sg@data)
+    save(list = outvar.name, file = paste(outputFileName,'.RData',sep='')) 
+  
+    ####
+    ## add to the csv file
+    ####
+    write.csv(sg@data,paste(outputFileName,'.csv',sep=''))
+    
+    ####
+    ## create a shape file
+    ####
+    if (strcmp('ACS_2014',substr(attr(data.current,'file.name'),1,8))){
+      write_ints = c(1,seq(before_ACS,ncol(sg@data),by=500),ncol(sg@data))
+      for (i in 2:length(write_ints)){
+        sg_write = sg[write_ints[i-1]:write_ints[i]]
+        out_name = paste(outputFileName,'_',(i-1),sep='')
+        
+        writeOGR(sg_write,dir.save, out_name, driver = 'ESRI Shapefile')
+        writeSpatialShape(sg_write, paste(dir.save,'/',out_name,sep=''))
+      } 
+    } else {
+      dir.save <- getwd()
+      writeOGR(sg,dir.save, outputFileName, driver = 'ESRI Shapefile')
+      writeSpatialShape(sg, paste(dir.save,'/',outputFileName,sep=''))
+    }
+    # go back to previous directory (I realize this is a hack, but maybe I'll fix it)
+    setwd(dir.previous)
   }
 }
 
