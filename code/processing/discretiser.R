@@ -309,10 +309,11 @@ areaLevel = function(sg,sf){
 
 areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
   # intersects the polygons with the grid and determines the area
+  city.name <- unique(database$City)
   if (to_save){
     # check if a saved RData file already exists
     gridSize = attr(sg,'grid_size')
-    gridded_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+    gridded_filename = paste(kPathDataTemp, '/', city.name, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
     alreadyProcessed = file.exists(gridded_filename)
     
     if (alreadyProcessed) {
@@ -395,11 +396,11 @@ areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
 
 areaCount = function(sg,sf=data.current,database){
   # process area-level data by finding taking the area weighted sum.
-  
+  city.name <- unique(database$City)
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
   data.name = attr(sf,'var.name')
-  gridded_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+  gridded_filename = paste(kPathDataTemp, '/', city.name, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_filename)
   
   if (alreadyProcessed) {
@@ -723,11 +724,11 @@ categoriseRaster = function(sg, data.raster, database){
   
   data.name = attr(data.raster,'var.name')
   file.type = attr(data.raster,'file.type')
-  
+  city.name <- unique(database$City)
   # this function takes a long time.
   # check if a saved RData file already exists
   gridSize = attr(sg,'grid_size')
-  gridded_raster_filename = paste(kPathDataTemp, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
+  gridded_raster_filename = paste(kPathDataTemp, '/', city.name, '/',data.name,'_gridsize_',gridSize,'.RData',sep='')
   alreadyProcessed = file.exists(gridded_raster_filename)
   print('grid size is:')
   print(gridSize)
