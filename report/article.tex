@@ -83,7 +83,7 @@ Understanding the drivers of urban land thermal radiance, a key factor of land s
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/holdout_results_r2.pdf}
-\caption{ADD Caption}
+\caption{The out-of-bag R$^2$ of the models when fitted on each city and used to predict a random sample from the same city. Out-of-bag R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.}
 \label{fig:cityholdout_errors}
 \end{center}
 \end{figure}
@@ -94,7 +94,7 @@ Understanding the drivers of urban land thermal radiance, a key factor of land s
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/cities_holdout.pdf}
-\caption{ADD Caption}
+\caption{The out-of-bag R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. Out-of-bag R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.}
 \label{fig:cityholdout_errors}
 \end{center}
 \end{figure}
@@ -118,7 +118,7 @@ Here are two sample references: \cite{Feynman1963118,Dirac1953888}.
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/holdout_results_mae.pdf}
-\caption{ADD Caption}
+\caption{The Mean Absolute Error (MAE) in $^oC$ of the models when fitted on each city and used to predict a random sample from the same city. Better models have lower MAE. This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models. }
 \label{fig:cityholdout_errors}
 \end{center}
 \end{figure}
