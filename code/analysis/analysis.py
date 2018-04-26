@@ -246,6 +246,10 @@ def prepare_lst_prediction(df):
     vars_lcov = [i for i in df.columns.values if 'lcov' in i]
     df = df.drop(vars_lcov, axis=1)
 
+    # drop impervious variables because they are 1:1 correlated with tree canopy
+    vars_imp = [i for i in df.columns.values if 'imp' in i]
+    df = df.drop(vars_imp, axis=1)
+
     return(df, lst_mean)
 
 def scale_X(X_train, X_test):
@@ -477,7 +481,8 @@ def feature_selection(holdout_num, city, df, period):
     # add variables based on which provide the best improvement to lowering MAE
     vars_inc = []
     vars_mae = []
-    while len(vars_inc)<len(variables):
+    num_vars = len(variables)
+    while len(vars_inc)<num_vars:
         # loop through the Variables
         variables = [var for var in variables if var not in vars_inc]
         variable_mae = pd.DataFrame(index=variables, columns=['mae'])
