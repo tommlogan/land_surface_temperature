@@ -17,11 +17,11 @@ library(raster)
 library(rgeos)
 
 
-main <- function(city, landsat_id, fn_land_cover, fn_tree, fn_imperv, fn_city_boundary, bands){
+main <- function(city, landsat_id, fn.landcover, fn.tree, fn.imperv, fn.cityboundary, bands, fn.elevation){
   # reads in the arguments passed
-  
+
   # import city boundary
-  city.buffer <- read_city_boundary(city, fn_city_boundary)
+  city.buffer <- read_city_boundary(city, fn.cityboundary)
   
   # import satellite image and clip to city buffer
   bands <- as.list(strsplit(bands,',')[[1]])
@@ -31,17 +31,20 @@ main <- function(city, landsat_id, fn_land_cover, fn_tree, fn_imperv, fn_city_bo
   }
   
   # import land cover image and clip to city buffer
-  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'LC')
+  clip_land_cover(city.buffer, fn.landcover, satellite.city, 'LC')
   
   # import tree canopy image and clip to cify buffer
-  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'CAN')
+  clip_land_cover(city.buffer, fn.landcover, satellite.city, 'CAN')
   
   # import impervious surface image and clip to cify buffer
-  clip_land_cover(city.buffer, fn_land_cover, satellite.city, 'IMP')
+  clip_land_cover(city.buffer, fn.landcover, satellite.city, 'IMP')
+  
+  # import elevation image and clip to city buffer
+  clip_elevation(city.buffer, fn.elevation, satellite.city)
   
 }
 
-read_city_boundary <- function(city, fn_city_boundary){
+read_city_boundary <- function(city, fn.cityboundary){
   # import the city boundary polygon, buffer it, and save it
   
   path.city <- file.path('data','intermediate',city)
@@ -55,7 +58,7 @@ read_city_boundary <- function(city, fn_city_boundary){
     city.buffer <- readOGR(dsn = path.city, layer = name.buffer)
   } else {
     # import the original
-    city.boundary <- readOGR(dsn = file.path('data', 'raw', city, fn_city_boundary), layer = fn_city_boundary)
+    city.boundary <- readOGR(dsn = file.path('data', 'raw', city, fn.cityboundary), layer = fn.cityboundary)
     
     # union shape file
     city.boundary <- gUnaryUnion(city.boundary)
@@ -118,7 +121,7 @@ clip_satellite <- function(city.buffer, landsat_id, band){
 }
 
 
-clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city, cover_type){
+clip_land_cover <- function(city.buffer, fn.landcover, satellite.city, cover_type){
   # import the land cover image, clip it to the city, and save it
   print(paste0('importing ', cover_type))
   path.landcover <- file.path('data','processed',city, paste0('NLCD2011_',cover_type,'_', city, '.tif'))
@@ -131,7 +134,54 @@ clip_land_cover <- function(city.buffer, fn_land_cover, satellite.city, cover_ty
   } else {
     # import the raw image
     print('import')
-    landcover.all <- raster(file.path('data','raw',city,fn_land_cover, paste0(fn_land_cover, '.tif')))
+    landcover.all <- raster(file.path('data','raw',city,fn.landcover, paste0(fn.landcover, '.tif')))
+    
+    # change projection of satellite
+    satellite.proj <- projectRaster(satellite.city, crs=CRS(proj4string(landcover.all)))
+    
+    # nearest neighbor resample
+    print('resample')
+    landcover.city <- resample(landcover.all, satellite.proj, method = 'ngb')
+    
+    # crop and mask
+    print('crop and mask')
+    landcover.city <- crop(landcover.city, extent(satellite.proj))
+    landcover.city <- mask(landcover.city, satellite.proj)
+    
+    # change projection
+    rasterOptions(maxmemory = 1e+07)
+    print('project')
+    landcover.city <- projectRaster(landcover.city, crs=CRS("+init=epsg:4326"), method = 'ngb')
+    
+    # repeat now that's in the correct projection
+    print('resample')
+    landcover.city <- resample(landcover.city, satellite.city, method = 'ngb')
+    
+    # crop and mask
+    print('crop and mask')
+    landcover.city <- crop(landcover.city, extent(satellite.city))
+    landcover.city <- mask(landcover.city, satellite.city)
+    
+    # save
+    writeRaster(landcover.city, path.landcover)
+  }
+}
+
+
+clip_elevation <- function(city.buffer, fn.landcover, satellite.city, cover_type){
+  # import the land cover image, clip it to the city, and save it
+  print('importing elevation')
+  path.landcover <- file.path('data','processed',city, paste0(city, '_', 'elevation', '.tif'))
+  
+  # check if processed already
+  alreadyProcessed = file.exists(path.landcover)
+  if (alreadyProcessed){
+    # import the buffered shapefile
+    landcover.city <- raster(path.landcover)
+  } else {
+    # import the raw image
+    print('import')
+    landcover.all <- raster(file.path('data','raw',city,fn.landcover, paste0(fn.landcover, '.img')))
     
     # change projection of satellite
     satellite.proj <- projectRaster(satellite.city, crs=CRS(proj4string(landcover.all)))
@@ -169,17 +219,18 @@ args.passed <- commandArgs(trailingOnly = TRUE)
 # inputs
 city <- args.passed[1]
 landsat_id <- args.passed[2]
-fn_land_cover <- args.passed[3]
-fn_city_boundary <- args.passed[4]
+fn.landcover <- args.passed[3]
+fn.cityboundary <- args.passed[4]
 bands <- args.passed[5]
-fn_tree <- args.passed[6]
-fn_imperv <- args.passed[7]
+fn.tree <- args.passed[6]
+fn.imperv <- args.passed[7]
+fn.elevation <- args.passed[8]
 # # temporary - during writing
 # city <- 'bal'
-# fn_city_boundary <- 'tl_2012_24510_faces'
-# fn_land_cover <- 'NLCD2011_LC_Maryland'
+# fn.cityboundary <- 'tl_2012_24510_faces'
+# fn.landcover <- 'NLCD2011_LC_Maryland'
 # landsat_id <- 'LC08_L1TP_015033_20170907_20170926_01_T1'
 
 # run main
-main(city, landsat_id, fn_land_cover, fn_tree, fn_imperv, fn_city_boundary, bands)
+main(city, landsat_id, fn.landcover, fn.tree, fn.imperv, fn.cityboundary, bands, fn.elevation)
 

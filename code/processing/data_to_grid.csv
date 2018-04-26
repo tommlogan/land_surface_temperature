@@ -10,3 +10,37 @@ processed,NLCD2011_IMP_bal,bal,imp,impervious surface percent,.tif,raster,26985
 processed/image,thermal-radiance_mean_day,bal,tr_day,thermal radiance,.tif,raster,26985
 processed/image,thermal-radiance_mean_night,bal,tr_nght,thermal radiance,.tif,raster,26985
 processed/image,thermal-radiance_11-Aug-13_day,bal,tr_2013_day,thermal radiance,.tif,raster,26985
+processed,bal_elevation,bal,elev,Elevation in meters,.tif,raster,26985
+processed,phx_boundary,phx,city,city boundary,.shp,areaLevel,26949
+processed/image,lst_mean_day,phx,lst_day_mean,land surface temperature,.tif,raster,26949
+processed/image,lst_mean_night,phx,lst_night_mean,land surface temperature,.tif,raster,26949
+processed/image,albedo_mean_day,phx,alb_mean,albedo,.tif,raster,26949
+processed/image,ndvi_mean_day,phx,ndvi_mean,vegetation index,.tif,raster,26949
+processed,NLCD2011_LC_phx,phx,lcov,National land cover database 2011,.tif,rasterCategory,26949
+processed,NLCD2011_CAN_phx,phx,tree,tree canopy cover,.tif,raster,26949
+processed,NLCD2011_IMP_phx,phx,imp,impervious surface percent,.tif,raster,26949
+processed/image,thermal-radiance_mean_day,phx,tr_day,thermal radiance,.tif,raster,26949
+processed/image,thermal-radiance_mean_night,phx,tr_nght,thermal radiance,.tif,raster,26949
+processed,phx_elevation,phx,elev,Elevation in meters,.tif,raster,26949
+processed,det_boundary,det,city,city boundary,.shp,areaLevel,26990
+processed/image,lst_mean_day,det,lst_day_mean,land surface temperature,.tif,raster,26990
+processed/image,lst_mean_night,det,lst_night_mean,land surface temperature,.tif,raster,26990
+processed/image,albedo_mean_day,det,alb_mean,albedo,.tif,raster,26990
+processed/image,ndvi_mean_day,det,ndvi_mean,vegetation index,.tif,raster,26990
+processed,NLCD2011_LC_det,det,lcov,National land cover database 2011,.tif,rasterCategory,26990
+processed,NLCD2011_CAN_det,det,tree,tree canopy cover,.tif,raster,26990
+processed,NLCD2011_IMP_det,det,imp,impervious surface percent,.tif,raster,26990
+processed/image,thermal-radiance_mean_day,det,tr_day,thermal radiance,.tif,raster,26990
+processed/image,thermal-radiance_mean_night,det,tr_nght,thermal radiance,.tif,raster,26990
+processed,det_elevation,det,elev,Elevation in meters,.tif,raster,26990
+processed,por_boundary,por,city,city boundary,.shp,areaLevel,32126
+processed/image,lst_mean_day,por,lst_day_mean,land surface temperature,.tif,raster,32126
+processed/image,lst_mean_night,por,lst_night_mean,land surface temperature,.tif,raster,32126
+processed/image,albedo_mean_day,por,alb_mean,albedo,.tif,raster,32126
+processed/image,ndvi_mean_day,por,ndvi_mean,vegetation index,.tif,raster,32126
+processed,NLCD2011_LC_por,por,lcov,National land cover database 2011,.tif,rasterCategory,32126
+processed,NLCD2011_CAN_por,por,tree,tree canopy cover,.tif,raster,32126
+processed,NLCD2011_IMP_por,por,imp,impervious surface percent,.tif,raster,32126
+processed/image,thermal-radiance_mean_day,por,tr_day,thermal radiance,.tif,raster,32126
+processed/image,thermal-radiance_mean_night,por,tr_nght,thermal radiance,.tif,raster,32126
+processed,por_elevation,por,elev,Elevation in meters,.tif,raster,32126

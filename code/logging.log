@@ -19,3 +19,67 @@
 2018-04-20 15:11:36,200 matplotlib.backends.backend_pdf DEBUG    MainProcess Assigning font /b'F1' = '/home/tlogan/research/land_surface_temperature/venv/lib/python3.5/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf'
 2018-04-20 15:11:36,339 matplotlib.backends.backend_pdf DEBUG    MainProcess Embedding font /home/tlogan/research/land_surface_temperature/venv/lib/python3.5/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf.
 2018-04-20 15:11:36,340 matplotlib.backends.backend_pdf DEBUG    MainProcess Writing TrueType font.
+2018-04-14 09:37:55,533 __main__        INFO     MainProcess Calculating the mean: bal, lst, day
+2018-04-14 09:37:56,044 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:56,205 __main__        INFO     MainProcess Calculating the mean: bal, ndvi, day
+2018-04-14 09:37:56,560 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:56,606 __main__        INFO     MainProcess Calculating the mean: bal, albedo, day
+2018-04-14 09:37:56,885 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:56,922 __main__        INFO     MainProcess Calculating the mean: bal, thermal-radiance, day
+2018-04-14 09:37:57,300 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:57,347 __main__        INFO     MainProcess Calculating the mean: bal, lst, night
+2018-04-14 09:37:57,782 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:57,820 __main__        INFO     MainProcess Calculating the mean: bal, ndvi, night
+2018-04-14 09:37:58,154 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:58,203 __main__        INFO     MainProcess Calculating the mean: bal, albedo, night
+2018-04-14 09:37:58,454 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:58,498 __main__        INFO     MainProcess Calculating the mean: bal, thermal-radiance, night
+2018-04-14 09:37:58,843 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:58,889 __main__        INFO     MainProcess Calculating the mean: det, lst, day
+2018-04-14 09:37:59,632 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:37:59,874 __main__        INFO     MainProcess Calculating the mean: det, ndvi, day
+2018-04-14 09:38:00,513 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:00,550 __main__        INFO     MainProcess Calculating the mean: det, albedo, day
+2018-04-14 09:38:01,169 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:01,216 __main__        INFO     MainProcess Calculating the mean: det, thermal-radiance, day
+2018-04-14 09:38:01,898 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:01,941 __main__        INFO     MainProcess Calculating the mean: det, lst, night
+2018-04-14 09:38:03,168 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:03,220 __main__        INFO     MainProcess Calculating the mean: det, ndvi, night
+2018-04-14 09:38:04,270 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:04,312 __main__        INFO     MainProcess Calculating the mean: det, albedo, night
+2018-04-14 09:38:05,358 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:05,410 __main__        INFO     MainProcess Calculating the mean: det, thermal-radiance, night
+2018-04-14 09:38:06,553 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:06,609 __main__        INFO     MainProcess Calculating the mean: phx, lst, day
+2018-04-14 09:38:08,014 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:08,096 __main__        INFO     MainProcess Calculating the mean: phx, ndvi, day
+2018-04-14 09:38:09,446 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:09,531 __main__        INFO     MainProcess Calculating the mean: phx, albedo, day
+2018-04-14 09:38:10,820 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:10,915 __main__        INFO     MainProcess Calculating the mean: phx, thermal-radiance, day
+2018-04-14 09:38:12,183 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:12,301 __main__        INFO     MainProcess Calculating the mean: phx, lst, night
+2018-04-14 09:38:13,493 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:13,572 __main__        INFO     MainProcess Calculating the mean: phx, ndvi, night
+2018-04-14 09:38:14,719 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:14,802 __main__        INFO     MainProcess Calculating the mean: phx, albedo, night
+2018-04-14 09:38:16,199 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:16,318 __main__        INFO     MainProcess Calculating the mean: phx, thermal-radiance, night
+2018-04-14 09:38:17,550 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:17,649 __main__        INFO     MainProcess Calculating the mean: por, lst, day
+2018-04-14 09:38:17,992 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:18,029 __main__        INFO     MainProcess Calculating the mean: por, ndvi, day
+2018-04-14 09:38:18,439 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:18,482 __main__        INFO     MainProcess Calculating the mean: por, albedo, day
+2018-04-14 09:38:18,914 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:19,058 __main__        INFO     MainProcess Calculating the mean: por, thermal-radiance, day
+2018-04-14 09:38:19,717 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:19,805 __main__        INFO     MainProcess Calculating the mean: por, lst, night
+2018-04-14 09:38:20,234 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:20,283 __main__        INFO     MainProcess Calculating the mean: por, ndvi, night
+2018-04-14 09:38:20,716 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:20,758 __main__        INFO     MainProcess Calculating the mean: por, albedo, night
+2018-04-14 09:38:21,201 __main__        INFO     MainProcess Calculating the albedo
+2018-04-14 09:38:21,243 __main__        INFO     MainProcess Calculating the mean: por, thermal-radiance, night
+2018-04-14 09:38:21,644 __main__        INFO     MainProcess Calculating the albedo

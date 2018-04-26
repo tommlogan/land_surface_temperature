@@ -8,6 +8,7 @@ data
 **/_scratch
 *.Rproj
 figs/exploratory
+fig/working
 *.log
 *.lnk
 *.html
