@@ -63,18 +63,15 @@ def main():
     # variable importance
 
     # variable selection
-    from datetime import datetime
-    vars_forward = {}
-    vars_forward['day'] = {}
-    vars_forward['night'] = {}
-    for city in cities+['all']:
-        for period in ['day','night']:
-            print('{}: Starting {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
-            vars_forward[period][city] = feature_selection(25, city, df, period)
-            print('{}: Completed {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
-    with open('data/variable_selection.pkl', 'wb') as f:
-        pickle.dump(vars_forward, f, pickle.HIGHEST_PROTOCOL)
+    # loop_variable_selection(df, cities)
 
+    # based on the results of the variable selection, rerun the regression and
+    # create the variable importance plots
+    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'elev_min_sl', 'tree_max', 'elev_mean', 'alb_mean_mean']
+    reg_gbm = full_gbm_regression(df, cities, vars_selected)
+
+    # plot the variable importance
+    plot_importance(reg_gbm, cities)
 
 def import_data(cities):
     df = pd.DataFrame()
@@ -431,10 +428,12 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
     return(loss)
 
-def full_gbm_regression(df, cities):
+def full_gbm_regression(df, cities, vars_selected=None):
     '''
     fit gbm on the entire dataset and return the objects
     '''
+    if vars_selected is None:
+        vars_selected = []
     reg_gbm = {}
     reg_gbm['diurnal'] = {}
     reg_gbm['nocturnal'] = {}
@@ -449,8 +448,12 @@ def full_gbm_regression(df, cities):
             df_city = df.copy()
         # drop necessary variables
         df_city, response = prepare_lst_prediction(df_city)
+        # keep only specified variables, if any were specified
+        if len(vars_selected)>0:
+            df_city = df_city[vars_selected+['city']]
         # no need to divide, but split into X and y
         X_train, X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
+        print(len(X_train), len(X_test))
         # scale explanatory variables
         X_train, X_train  = scale_X(X_train, X_train)
         # response values
@@ -463,6 +466,18 @@ def full_gbm_regression(df, cities):
     reg_gbm['covariates'] = X_train.columns
     return(reg_gbm)
 
+def loop_variable_selection(df, cities):
+    from datetime import datetime
+    vars_forward = {}
+    vars_forward['day'] = {}
+    vars_forward['night'] = {}
+    for city in cities+['all']:
+        for period in ['day','night']:
+            print('{}: Starting {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
+            vars_forward[period][city] = feature_selection(25, city, df, period)
+            print('{}: Completed {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
+    with open('data/variable_selection.pkl', 'wb') as f:
+        pickle.dump(vars_forward, f, pickle.HIGHEST_PROTOCOL)
 
 def feature_selection(holdout_num, city, df, period):
     '''
@@ -520,8 +535,6 @@ def feature_selection(holdout_num, city, df, period):
 ###
 # Plotting code
 ###
-
-
 def plot_density(df, cities):
     '''
     output density plots of the variables
@@ -575,7 +588,6 @@ def plot_density(df, cities):
         plt.savefig('fig/working/density/lst-vs-tr_night.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-
 def plot_holdout_points(loss):
     loss_plot = loss.unstack(level=0)
     loss_plot = loss_plot.unstack(level=0)
@@ -592,7 +604,7 @@ def plot_holdout_points(loss):
         "#8b8b8b",
     ]
     sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 22})
+    mpl.rcParams.update({'font.size': 20})
     g = sns.factorplot(orient="h", y="model", x="value", hue="city", linestyles='', markers=['v','o','^','x'],
     col = "loss", row = "time", data=loss_plot, sharex = 'col', order=['null','mlr','gbm'], aspect=2, scale=1.5)
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
@@ -646,34 +658,31 @@ def plot_holdouts():
         plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-def plot_importance(reg_gbm, cities):
+def plot_importance(reg_gbm, cities, show_plot=False):
     '''
     plot the feature importance of the variables and the cities
     '''
-    # cities = list(reg_gbm['diurnal'].keys())
-    cities = cities.copy()
+    cities =  cities.copy()
     cities.append('all')
     five_thirty_eight = [
         "#30a2da",
         "#fc4f30",
         "#e5ae38",
         "#6d904f",
-        "#8b8b8b",
-    ]
+        "#8b8b8b",]
     sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 22})
+    mpl.rcParams.update({'font.size': 20})
     # get the covariates - these will be the indices in the dataframe
-    header = pd.MultiIndex.from_product([cities,
-                                     ['diurnal','nocturnal']],
-                                    names=['city','time'])
+    header = pd.MultiIndex.from_product([['diurnal','nocturnal'], cities],
+                                    names=['time','city'])
     var_imp = pd.DataFrame(columns = header, index = list(reg_gbm['covariates']))
+    # loop the cities to add the var imp to the df
     for city in cities:
         for time in ['diurnal','nocturnal']:
-            var_imp.loc[:,(city, time)] = reg_gbm[time][city].feature_importances_
-    # sort the values on the mean of the nocturnal values
+            var_imp.loc[:,(time, city)] = reg_gbm[time][city].feature_importances_
     var_imp.loc[:,('nocturnal','mean')] = np.mean(var_imp.loc[:,'nocturnal'].drop('all',axis=1),axis=1)
     var_imp = var_imp.sort_values(by=('nocturnal','mean'),ascending=False)
-    # prepare the nocturnal values
+    # make the nocturnal values negative
     nocturnal = var_imp.loc[:,'nocturnal'].copy()
     nocturnal = nocturnal.drop('mean',axis=1)
     nocturnal['covariate'] = nocturnal.index
@@ -685,19 +694,35 @@ def plot_importance(reg_gbm, cities):
     diurnal = pd.melt(diurnal,id_vars=['covariate'])
     # plot
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=nocturnal, palette = five_thirty_eight)
-
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=diurnal, palette = five_thirty_eight)
     handles, labels = ax.get_legend_handles_labels()
     plt.xlabel('Variable Importance')
     plt.ylabel('Variables')
     l = plt.legend(handles[0:4], labels[0:4], loc='lower right')
-    plt.savefig('fig/working/variable_importance_all.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
-    plt.clf()
+    # zero line
+    [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
+    plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
+    plt.xlim(-0.4,0.4)
+    # save the figure
+    if show_plot:
+        plt.show()
+    else:
+        plt.savefig('fig/working/variable_importance_selected.pdf', format='pdf', dpi=1000, transparent=True)
+        plt.clf()
 
 def plot_partialdependence(num_vars, importance_order, reg_gbm):
     '''
     Plot the partial dependence for the different regressors
     '''
+    # plot setup (surely this can be a function)
+    five_thirty_eight = [
+        "#30a2da",
+        "#fc4f30",
+        "#e5ae38",
+        "#6d904f",
+        "#8b8b8b",]
+    sns.set_palette(five_thirty_eight)
+    mpl.rcParams.update({'font.size': 20})
     # init subplots (left is nocturnal, right is diurnal)
 
     # loop through the top n variables by nocturnal importance
