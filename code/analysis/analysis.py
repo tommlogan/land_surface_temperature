@@ -19,7 +19,6 @@ import pickle
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble.partial_dependence import plot_partial_dependence
 from sklearn.ensemble.partial_dependence import partial_dependence
 from sklearn.metrics import mean_squared_error, r2_score
 from xgboost import XGBRegressor
@@ -68,10 +67,13 @@ def main():
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
     vars_selected = ['tree_mean', 'ndvi_mean_mean', 'elev_min_sl', 'tree_max', 'elev_mean', 'alb_mean_mean']
-    reg_gbm = full_gbm_regression(df, cities, vars_selected)
+    reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
 
     # plot the variable importance
-    plot_importance(reg_gbm, cities)
+    importance_order = plot_importance(reg_gbm, cities)
+
+    # plot the partial dependence
+    plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
 def import_data(cities):
     df = pd.DataFrame()
@@ -115,6 +117,9 @@ def transform_data(df):
     for var_lcov in vars_lcov:
         df[var_lcov] = df[var_lcov]/area_max
 
+    # drop rows with water more than 20% of area
+    df = df.loc[df['lcov_11'] < 0.2]
+    
     # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
     tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
     df = df.drop(tr_2013, axis=1)
@@ -437,6 +442,7 @@ def full_gbm_regression(df, cities, vars_selected=None):
     reg_gbm = {}
     reg_gbm['diurnal'] = {}
     reg_gbm['nocturnal'] = {}
+    X_train = {}
     predict_quant = 'lst'
     cities = cities.copy()
     cities.append('all')
@@ -452,19 +458,19 @@ def full_gbm_regression(df, cities, vars_selected=None):
         if len(vars_selected)>0:
             df_city = df_city[vars_selected+['city']]
         # no need to divide, but split into X and y
-        X_train, X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
-        print(len(X_train), len(X_test))
+        X_train[city], X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
+        print(len(X_train[city]), len(X_test))
         # scale explanatory variables
-        X_train, X_train  = scale_X(X_train, X_train)
+        X_train[city], X_train[city]  = scale_X(X_train[city], X_train[city])
         # response values
         y = define_response_lst(y_train, y_train)
         # fit the model
         reg_gbm['diurnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
-        reg_gbm['diurnal'][city].fit(X_train, y['day_train'])
+        reg_gbm['diurnal'][city].fit(X_train[city], y['day_train'])
         reg_gbm['nocturnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
-        reg_gbm['nocturnal'][city].fit(X_train, y['night_train'])
-    reg_gbm['covariates'] = X_train.columns
-    return(reg_gbm)
+        reg_gbm['nocturnal'][city].fit(X_train[city], y['night_train'])
+    reg_gbm['covariates'] = X_train[city].columns
+    return(reg_gbm, X_train)
 
 def loop_variable_selection(df, cities):
     from datetime import datetime
@@ -693,27 +699,35 @@ def plot_importance(reg_gbm, cities, show_plot=False):
     diurnal.loc[:,'covariate'] = diurnal.index
     diurnal = pd.melt(diurnal,id_vars=['covariate'])
     # plot
+    fig, ax = plt.subplots()
+    fig.set_size_inches(15, 9)
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=nocturnal, palette = five_thirty_eight)
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=diurnal, palette = five_thirty_eight)
-    handles, labels = ax.get_legend_handles_labels()
     plt.xlabel('Variable Importance')
     plt.ylabel('Variables')
-    l = plt.legend(handles[0:4], labels[0:4], loc='lower right')
+    # legend
+    handles, labels = ax.get_legend_handles_labels()
+    l = plt.legend(handles[0:5], labels[0:5], loc='lower right')
     # zero line
     [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
     plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
     plt.xlim(-0.4,0.4)
+    plt.tight_layout()
     # save the figure
     if show_plot:
         plt.show()
     else:
         plt.savefig('fig/working/variable_importance_selected.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
+    importance_order = var_imp.index.values
+    return(importance_order)
 
-def plot_partialdependence(num_vars, importance_order, reg_gbm):
+def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
     '''
     Plot the partial dependence for the different regressors
     '''
+    cities =  cities.copy()
+    cities.append('all')
     # plot setup (surely this can be a function)
     five_thirty_eight = [
         "#30a2da",
@@ -724,14 +738,38 @@ def plot_partialdependence(num_vars, importance_order, reg_gbm):
     sns.set_palette(five_thirty_eight)
     mpl.rcParams.update({'font.size': 20})
     # init subplots (left is nocturnal, right is diurnal)
-
+    fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey='row')
     # loop through the top n variables by nocturnal importance
-
-    # for each of the variables
-    # for each city
-    # add the partial dependence line to the subplot
-    # for the all city case, dash the line
-
+    feature = 0
+    for var_dependent in importance_order:
+        left_right = 0
+        for period in ['nocturnal', 'diurnal']:
+            for city in cities:
+                gbm = reg_gbm[period][city]
+                # feature position
+                feature_num = vars_selected.index(var_dependent)
+                # calculate the partial dependence
+                y, x = partial_dependence(gbm, feature_num, X = X_train[city],
+                                        grid_resolution = 50)
+                # add the line to the plot
+                if city=='all':
+                    axes[feature, left_right].plot(x[0],y[0],label=city, linestyle='--', color='#8b8b8b')
+                else:
+                    axes[feature, left_right].plot(x[0],y[0],label=city)
+                # add the label to the plot
+                axes[feature, left_right].set_xlabel(var_dependent)
+            left_right += 1
+        feature += 1
+    # legend
+    handles, labels = axes[0,0].get_legend_handles_labels()
+    l = plt.legend(handles[0:5], labels[0:5], loc='lower left')
+    # save the figure
+    fig.tight_layout()
+    if show_plot:
+        fig.show()
+    else:
+        fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
+        fig.clf()
 
 if __name__ == '__main__':
     # profile() # initialise the board
