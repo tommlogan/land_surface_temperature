@@ -59,20 +59,19 @@ def main():
 
     # variable importance and partial dependence
     # reg_gbm = full_gbm_regression(df, cities)
-    # variable importance
 
     # variable selection
     # loop_variable_selection(df, cities)
 
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
-    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'elev_min_sl', 'tree_max', 'elev_mean', 'alb_mean_mean']
+    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
     reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
-
-    # plot the variable importance
+    #
+    # # plot the variable importance
     importance_order = plot_importance(reg_gbm, cities)
-
-    # plot the partial dependence
+    #
+    # # plot the partial dependence
     plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
 def import_data(cities):
@@ -119,7 +118,7 @@ def transform_data(df):
 
     # drop rows with water more than 20% of area
     df = df.loc[df['lcov_11'] < 0.2]
-    
+
     # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
     tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
     df = df.drop(tr_2013, axis=1)
@@ -765,6 +764,16 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
     l = plt.legend(handles[0:5], labels[0:5], loc='lower left')
     # save the figure
     fig.tight_layout()
+
+    # Shrink current axis's height by 10% on the bottom
+    box = axes.get_position()
+    axes.set_position([box.x0, box.y0 + box.height * 0.1,
+                     box.width, box.height * 0.9])
+
+    # Put a legend below current axis
+    axes.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+              fancybox=True, shadow=True, ncol=5)
+
     if show_plot:
         fig.show()
     else:
