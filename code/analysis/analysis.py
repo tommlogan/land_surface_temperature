@@ -21,7 +21,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble.partial_dependence import partial_dependence
 from sklearn.metrics import mean_squared_error, r2_score
-from xgboost import XGBRegressor
+# from xgboost import XGBRegressor
 
 # init logging
 import sys
@@ -44,24 +44,24 @@ def main():
     df = transform_data(df)
 
     # present the data - density plot
-    # plot_density(df, cities)
+    plot_density(df, cities)
 
     # regression
     ## train on three cities, test on one
-    # loss = regression_cityholdouts(df, cities)
+    loss = regression_cityholdouts(df, cities)
     # plot the points
-    # plot_holdout_points(loss)
+    plot_holdout_points(loss)
 
     ## for each city, train and test
-    # sim_num = 100
-    # regressions(df, cities, sim_num)
-    # plot_holdouts()
+    sim_num = 100
+    regressions(df, cities, sim_num)
+    plot_holdouts()
 
     # variable importance and partial dependence
-    # reg_gbm = full_gbm_regression(df, cities)
+    reg_gbm = full_gbm_regression(df, cities)
 
     # variable selection
-    # loop_variable_selection(df, cities)
+    loop_variable_selection(df, cities)
 
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
@@ -82,7 +82,7 @@ def import_data(cities):
         # append city name to df
         df_new['city'] = city
         # bind to complete df
-        df = df.append(df_new)
+        df = df.append(df_new, ignore_index=True)
     return(df)
 
 def transform_data(df):
@@ -127,6 +127,16 @@ def transform_data(df):
     df = df.dropna(axis=1, how='all')
     # drop any nan rows and report how many dropped
     df = df.dropna(axis=0, how='any')
+
+    # scale albedo
+    vars_alb = [i for i in vars_all if 'alb' in i]
+    alb_min = df[vars_alb].values.min()
+    alb_max = df[vars_alb].values.max()
+    df.loc[:,vars_alb] = (df[vars_alb]-alb_min)/alb_max
+
+    # make tree values a percentage
+    vars_tree = [i for i in vars_all if 'tree' in i]
+    df.loc[:,vars_tree] = df[vars_tree]/100
 
     return(df)
 
@@ -257,13 +267,19 @@ def scale_X(X_train, X_test):
     '''
     scale the variables so they are more suited for regression
     '''
+    vars_all = X_train.columns.values
     X_train = X_train.drop('city', axis=1)
     X_test = X_test.drop('city', axis=1)
-    scaler = preprocessing.MinMaxScaler()
-    scaler.fit(X_train)
-    X_scaled = scaler.transform(X_train)
-    X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
-    X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
+    # scaler = preprocessing.MinMaxScaler()
+    # scaler.fit(X_train)
+    # X_scaled = scaler.transform(X_train)
+    # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
+    # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
+    vars_elev = [i for i in vars_all if 'elev' in i]
+    elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
+    elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
+    X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/elev_max
+    X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/elev_max
 
     return(X_train, X_test)
 
@@ -749,7 +765,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
                 feature_num = vars_selected.index(var_dependent)
                 # calculate the partial dependence
                 y, x = partial_dependence(gbm, feature_num, X = X_train[city],
-                                        grid_resolution = 50)
+                                        grid_resolution = 100, percentiles = (0,1))
                 # add the line to the plot
                 if city=='all':
                     axes[feature, left_right].plot(x[0],y[0],label=city, linestyle='--', color='#8b8b8b')
@@ -761,19 +777,11 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         feature += 1
     # legend
     handles, labels = axes[0,0].get_legend_handles_labels()
-    l = plt.legend(handles[0:5], labels[0:5], loc='lower left')
+    # l = plt.legend(handles[0:5], labels[0:5], loc='lower left')
+    fig.legend(handles[0:5], labels[0:5], loc='lower center', bbox_to_anchor=(0.5,-0.007),
+              fancybox=True, shadow=True, ncol=5)
     # save the figure
     fig.tight_layout()
-
-    # Shrink current axis's height by 10% on the bottom
-    box = axes.get_position()
-    axes.set_position([box.x0, box.y0 + box.height * 0.1,
-                     box.width, box.height * 0.9])
-
-    # Put a legend below current axis
-    axes.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-              fancybox=True, shadow=True, ncol=5)
-
     if show_plot:
         fig.show()
     else:
