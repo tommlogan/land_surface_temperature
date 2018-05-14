@@ -132,7 +132,7 @@ def transform_data(df):
     vars_alb = [i for i in vars_all if 'alb' in i]
     alb_min = df[vars_alb].values.min()
     alb_max = df[vars_alb].values.max()
-    df.loc[:,vars_alb] = (df[vars_alb]-alb_min)/alb_max
+    df.loc[:,vars_alb] = (df[vars_alb]-alb_min)/(alb_max-alb_min)
 
     # make tree values a percentage
     vars_tree = [i for i in vars_all if 'tree' in i]
@@ -268,18 +268,34 @@ def scale_X(X_train, X_test):
     scale the variables so they are more suited for regression
     '''
     vars_all = X_train.columns.values
-    X_train = X_train.drop('city', axis=1)
-    X_test = X_test.drop('city', axis=1)
+    cities = np.unique(X_train['city'])
+
     # scaler = preprocessing.MinMaxScaler()
     # scaler.fit(X_train)
     # X_scaled = scaler.transform(X_train)
     # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
     # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
     vars_elev = [i for i in vars_all if 'elev' in i]
+    print(cities)
+    print(len(cities))
+    if len(cities) > 1:
+        # normalize elevation by subtracting median of city from the city
+        df = pd.concat([X_train, X_test])
+        medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+        for city in cities:
+            X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
+            X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
+
+    X_train = X_train.drop('city', axis=1)
+    X_test = X_test.drop('city', axis=1)
+
     elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
     elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
-    X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/elev_max
-    X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/elev_max
+    print(elev_max, elev_min)
+    X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+
+
 
     return(X_train, X_test)
 
@@ -765,7 +781,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
                 feature_num = vars_selected.index(var_dependent)
                 # calculate the partial dependence
                 y, x = partial_dependence(gbm, feature_num, X = X_train[city],
-                                        grid_resolution = 100, percentiles = (0,1))
+                                        grid_resolution = 100)
                 # add the line to the plot
                 if city=='all':
                     axes[feature, left_right].plot(x[0],y[0],label=city, linestyle='--', color='#8b8b8b')
