@@ -14,6 +14,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 import pickle
+pd.options.mode.chained_assignment = 'raise'
 
 # regression libraries
 from sklearn.ensemble import RandomForestRegressor
@@ -44,28 +45,29 @@ def main():
     df = transform_data(df)
 
     # present the data - density plot
-    plot_density(df, cities)
-
-    # regression
-    ## train on three cities, test on one
-    loss = regression_cityholdouts(df, cities)
-    # plot the points
-    plot_holdout_points(loss)
-
-    ## for each city, train and test
-    sim_num = 100
-    regressions(df, cities, sim_num)
-    plot_holdouts()
-
-    # variable importance and partial dependence
-    reg_gbm = full_gbm_regression(df, cities)
-
-    # variable selection
-    loop_variable_selection(df, cities)
+    # plot_density(df, cities)
+    #
+    # # regression
+    # ## train on three cities, test on one
+    # loss = regression_cityholdouts(df, cities)
+    # # plot the points
+    # plot_holdout_points(loss)
+    #
+    # ## for each city, train and test
+    # sim_num = 100
+    # regressions(df, cities, sim_num)
+    # plot_holdouts()
+    #
+    # # variable importance and partial dependence
+    # reg_gbm = full_gbm_regression(df, cities)
+    #
+    # # variable selection
+    # loop_variable_selection(df, cities)
 
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
-    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
+    #vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
+    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'alb_mean_min', 'elev_min_sl', 'ndvi_mean_min']
     reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
     #
     # # plot the variable importance
@@ -137,7 +139,6 @@ def transform_data(df):
     # make tree values a percentage
     vars_tree = [i for i in vars_all if 'tree' in i]
     df.loc[:,vars_tree] = df[vars_tree]/100
-
     return(df)
 
 def regressions(df, cities, sim_num):
@@ -191,10 +192,10 @@ def regression_cityholdouts(df, cities):
         # import code
         # code.interact(local=locals())
         # divide into test and training sets
-        X_train = df.iloc[train_idx]
-        y_train = response.iloc[train_idx]
-        X_test = df.iloc[test_idx]
-        y_test = response.iloc[test_idx]
+        X_train = df.iloc[train_idx].copy()
+        y_train = response.iloc[train_idx].copy()
+        X_test = df.iloc[test_idx].copy()
+        y_test = response.iloc[test_idx].copy()
         # scale explanatory variables
         X_train, X_test = scale_X(X_train, X_test)
         # response values
@@ -276,26 +277,32 @@ def scale_X(X_train, X_test):
     # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
     # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
     vars_elev = [i for i in vars_all if 'elev' in i]
-    print(cities)
-    print(len(cities))
-    if len(cities) > 1:
-        # normalize elevation by subtracting median of city from the city
-        df = pd.concat([X_train, X_test])
-        medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
-        for city in cities:
-            X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
-            X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
+    if len(vars_elev)>0:
+        # print(cities)
+        # print(len(cities))
+        if len(cities) > 1:
+            # normalize elevation by subtracting median of city from the city
+            df = pd.concat([X_train, X_test])
+            medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+            for city in cities:
+                X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
+                X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
 
-    X_train = X_train.drop('city', axis=1)
-    X_test = X_test.drop('city', axis=1)
+        X_train = X_train.drop('city', axis=1)
+        X_test = X_test.drop('city', axis=1)
 
-    elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
-    elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
-    print(elev_max, elev_min)
-    X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-    X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-
-
+        if len(X_test[vars_elev].values) > 0:
+            elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
+            elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
+            X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+        else:
+            elev_max = X_train[vars_elev].values.max()
+            elev_min = X_train[vars_elev].values.min()
+        # print(elev_max, elev_min)
+        X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    else:
+        X_train = X_train.drop('city', axis=1)
+        X_test = X_test.drop('city', axis=1)
 
     return(X_train, X_test)
 
@@ -480,7 +487,7 @@ def full_gbm_regression(df, cities, vars_selected=None):
     for city in cities:
         # subset for the city
         if city != 'all':
-            df_city = df[df['city']==city]
+            df_city = df[df['city']==city].copy()
         else:
             df_city = df.copy()
         # drop necessary variables
@@ -508,7 +515,7 @@ def loop_variable_selection(df, cities):
     vars_forward = {}
     vars_forward['day'] = {}
     vars_forward['night'] = {}
-    for city in cities+['all']:
+    for city in ['all'] + cities:
         for period in ['day','night']:
             print('{}: Starting {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
             vars_forward[period][city] = feature_selection(25, city, df, period)
@@ -525,7 +532,7 @@ def feature_selection(holdout_num, city, df, period):
     variables = [var for var in variables if var not in ['city','area']]
     # subset for the city
     if city != 'all':
-        df_city = df[df['city']==city]
+        df_city = df[df['city']==city].copy()
     else:
         df_city = df.copy()
     # drop necessary variables
@@ -546,7 +553,7 @@ def feature_selection(holdout_num, city, df, period):
                 # no need to divide, but split into X and y
                 X_train, X_test, y_train, y_test = train_test_split(df_var, response, test_size=0.2)#, random_state=RANDOM_SEED)
                 # scale explanatory variables
-                X_train, X_test  = scale_X(X_train, X_test)
+                X_train, X_test  = scale_X(X_train.copy(), X_test.copy())
                 # response values
                 y = define_response_lst(y_train, y_test)
                 # fit the model
