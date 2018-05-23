@@ -67,7 +67,8 @@ def main():
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
     #vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
-    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'alb_mean_min', 'elev_min_sl', 'ndvi_mean_min']
+    # vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'alb_mean_min', 'elev_min_sl', 'ndvi_mean_min']
+    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min', 'alb_mean_min_sl', 'elev_max']
     reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
     #
     # # plot the variable importance
@@ -139,6 +140,21 @@ def transform_data(df):
     # make tree values a percentage
     vars_tree = [i for i in vars_all if 'tree' in i]
     df.loc[:,vars_tree] = df[vars_tree]/100
+
+    ###
+    # elevation transform and scale
+    ###
+    vars_elev = [i for i in vars_all if 'elev' in i]
+    cities = np.unique(df['city'])
+    # subtract city median elevation
+    medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+    for city in cities:
+        df.loc[df['city']==city,vars_elev] = df.loc[df['city']==city,vars_elev] - medians[city]
+    # scale the cities
+    elev_max = np.max(df[vars_elev].values.max())
+    elev_min = np.min(df[vars_elev].values.min())
+    df.loc[:,vars_elev] = (df.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+
     return(df)
 
 def regressions(df, cities, sim_num):
@@ -276,33 +292,33 @@ def scale_X(X_train, X_test):
     # X_scaled = scaler.transform(X_train)
     # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
     # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
-    vars_elev = [i for i in vars_all if 'elev' in i]
-    if len(vars_elev)>0:
-        # print(cities)
-        # print(len(cities))
-        if len(cities) > 1:
-            # normalize elevation by subtracting median of city from the city
-            df = pd.concat([X_train, X_test])
-            medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
-            for city in cities:
-                X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
-                X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
-
-        X_train = X_train.drop('city', axis=1)
-        X_test = X_test.drop('city', axis=1)
-
-        if len(X_test[vars_elev].values) > 0:
-            elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
-            elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
-            X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-        else:
-            elev_max = X_train[vars_elev].values.max()
-            elev_min = X_train[vars_elev].values.min()
-        # print(elev_max, elev_min)
-        X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-    else:
-        X_train = X_train.drop('city', axis=1)
-        X_test = X_test.drop('city', axis=1)
+    # vars_elev = [i for i in vars_all if 'elev' in i]
+    # if len(vars_elev)>0:
+    #     # print(cities)
+    #     # print(len(cities))
+    #     if len(cities) > 1:
+    #         # normalize elevation by subtracting median of city from the city
+    #         df = pd.concat([X_train, X_test])
+    #         medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+    #         for city in cities:
+    #             X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
+    #             X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
+    #
+    #     X_train = X_train.drop('city', axis=1)
+    #     X_test = X_test.drop('city', axis=1)
+    #
+    #     if len(X_test[vars_elev].values) > 0:
+    #         elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
+    #         elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
+    #         X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    #     else:
+    #         elev_max = X_train[vars_elev].values.max()
+    #         elev_min = X_train[vars_elev].values.min()
+    #     # print(elev_max, elev_min)
+    #     X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    # else:
+    X_train = X_train.drop('city', axis=1)
+    X_test = X_test.drop('city', axis=1)
 
     return(X_train, X_test)
 
@@ -776,7 +792,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
     sns.set_palette(five_thirty_eight)
     mpl.rcParams.update({'font.size': 20})
     # init subplots (left is nocturnal, right is diurnal)
-    fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey='row')
+    fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey=True)#'row')
     # loop through the top n variables by nocturnal importance
     feature = 0
     for var_dependent in importance_order:
