@@ -14,15 +14,15 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 import pickle
+pd.options.mode.chained_assignment = 'raise'
 
 # regression libraries
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble.partial_dependence import plot_partial_dependence
 from sklearn.ensemble.partial_dependence import partial_dependence
 from sklearn.metrics import mean_squared_error, r2_score
-from xgboost import XGBRegressor
+# from xgboost import XGBRegressor
 
 # init logging
 import sys
@@ -46,35 +46,36 @@ def main():
 
     # present the data - density plot
     # plot_density(df, cities)
-
-    # regression
-    ## train on three cities, test on one
+    #
+    # # regression
+    # ## train on three cities, test on one
     # loss = regression_cityholdouts(df, cities)
-    # plot the points
+    # # plot the points
     # plot_holdout_points(loss)
-
-    ## for each city, train and test
+    #
+    # ## for each city, train and test
     # sim_num = 100
     # regressions(df, cities, sim_num)
     # plot_holdouts()
-
-    # variable importance and partial dependence
+    #
+    # # variable importance and partial dependence
     # reg_gbm = full_gbm_regression(df, cities)
-    # variable importance
+    #
+    # # variable selection
+    # loop_variable_selection(df, cities)
 
-    # variable selection
-    from datetime import datetime
-    vars_forward = {}
-    vars_forward['day'] = {}
-    vars_forward['night'] = {}
-    for city in cities+['all']:
-        for period in ['day','night']:
-            print('{}: Starting {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
-            vars_forward[period][city] = feature_selection(25, city, df, period)
-            print('{}: Completed {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
-    with open('data/variable_selection.pkl', 'wb') as f:
-        pickle.dump(vars_forward, f, pickle.HIGHEST_PROTOCOL)
-
+    # based on the results of the variable selection, rerun the regression and
+    # create the variable importance plots
+    #vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
+    # vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'alb_mean_min', 'elev_min_sl', 'ndvi_mean_min']
+    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min', 'alb_mean_min_sl', 'elev_max']
+    reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
+    #
+    # # plot the variable importance
+    importance_order = plot_importance(reg_gbm, cities)
+    #
+    # # plot the partial dependence
+    plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
 def import_data(cities):
     df = pd.DataFrame()
@@ -84,7 +85,7 @@ def import_data(cities):
         # append city name to df
         df_new['city'] = city
         # bind to complete df
-        df = df.append(df_new)
+        df = df.append(df_new, ignore_index=True)
     return(df)
 
 def transform_data(df):
@@ -118,6 +119,9 @@ def transform_data(df):
     for var_lcov in vars_lcov:
         df[var_lcov] = df[var_lcov]/area_max
 
+    # drop rows with water more than 20% of area
+    df = df.loc[df['lcov_11'] < 0.2]
+
     # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
     tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
     df = df.drop(tr_2013, axis=1)
@@ -126,6 +130,30 @@ def transform_data(df):
     df = df.dropna(axis=1, how='all')
     # drop any nan rows and report how many dropped
     df = df.dropna(axis=0, how='any')
+
+    # scale albedo
+    vars_alb = [i for i in vars_all if 'alb' in i]
+    alb_min = df[vars_alb].values.min()
+    alb_max = df[vars_alb].values.max()
+    df.loc[:,vars_alb] = (df[vars_alb]-alb_min)/(alb_max-alb_min)
+
+    # make tree values a percentage
+    vars_tree = [i for i in vars_all if 'tree' in i]
+    df.loc[:,vars_tree] = df[vars_tree]/100
+
+    ###
+    # elevation transform and scale
+    ###
+    vars_elev = [i for i in vars_all if 'elev' in i]
+    cities = np.unique(df['city'])
+    # subtract city median elevation
+    medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+    for city in cities:
+        df.loc[df['city']==city,vars_elev] = df.loc[df['city']==city,vars_elev] - medians[city]
+    # scale the cities
+    elev_max = np.max(df[vars_elev].values.max())
+    elev_min = np.min(df[vars_elev].values.min())
+    df.loc[:,vars_elev] = (df.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
 
     return(df)
 
@@ -180,10 +208,10 @@ def regression_cityholdouts(df, cities):
         # import code
         # code.interact(local=locals())
         # divide into test and training sets
-        X_train = df.iloc[train_idx]
-        y_train = response.iloc[train_idx]
-        X_test = df.iloc[test_idx]
-        y_test = response.iloc[test_idx]
+        X_train = df.iloc[train_idx].copy()
+        y_train = response.iloc[train_idx].copy()
+        X_test = df.iloc[test_idx].copy()
+        y_test = response.iloc[test_idx].copy()
         # scale explanatory variables
         X_train, X_test = scale_X(X_train, X_test)
         # response values
@@ -256,13 +284,41 @@ def scale_X(X_train, X_test):
     '''
     scale the variables so they are more suited for regression
     '''
+    vars_all = X_train.columns.values
+    cities = np.unique(X_train['city'])
+
+    # scaler = preprocessing.MinMaxScaler()
+    # scaler.fit(X_train)
+    # X_scaled = scaler.transform(X_train)
+    # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
+    # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
+    # vars_elev = [i for i in vars_all if 'elev' in i]
+    # if len(vars_elev)>0:
+    #     # print(cities)
+    #     # print(len(cities))
+    #     if len(cities) > 1:
+    #         # normalize elevation by subtracting median of city from the city
+    #         df = pd.concat([X_train, X_test])
+    #         medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
+    #         for city in cities:
+    #             X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
+    #             X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
+    #
+    #     X_train = X_train.drop('city', axis=1)
+    #     X_test = X_test.drop('city', axis=1)
+    #
+    #     if len(X_test[vars_elev].values) > 0:
+    #         elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
+    #         elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
+    #         X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    #     else:
+    #         elev_max = X_train[vars_elev].values.max()
+    #         elev_min = X_train[vars_elev].values.min()
+    #     # print(elev_max, elev_min)
+    #     X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
+    # else:
     X_train = X_train.drop('city', axis=1)
     X_test = X_test.drop('city', axis=1)
-    scaler = preprocessing.MinMaxScaler()
-    scaler.fit(X_train)
-    X_scaled = scaler.transform(X_train)
-    X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
-    X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
 
     return(X_train, X_test)
 
@@ -431,38 +487,57 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
     return(loss)
 
-def full_gbm_regression(df, cities):
+def full_gbm_regression(df, cities, vars_selected=None):
     '''
     fit gbm on the entire dataset and return the objects
     '''
+    if vars_selected is None:
+        vars_selected = []
     reg_gbm = {}
     reg_gbm['diurnal'] = {}
     reg_gbm['nocturnal'] = {}
+    X_train = {}
     predict_quant = 'lst'
     cities = cities.copy()
     cities.append('all')
     for city in cities:
         # subset for the city
         if city != 'all':
-            df_city = df[df['city']==city]
+            df_city = df[df['city']==city].copy()
         else:
             df_city = df.copy()
         # drop necessary variables
         df_city, response = prepare_lst_prediction(df_city)
+        # keep only specified variables, if any were specified
+        if len(vars_selected)>0:
+            df_city = df_city[vars_selected+['city']]
         # no need to divide, but split into X and y
-        X_train, X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
+        X_train[city], X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
+        print(len(X_train[city]), len(X_test))
         # scale explanatory variables
-        X_train, X_train  = scale_X(X_train, X_train)
+        X_train[city], X_train[city]  = scale_X(X_train[city], X_train[city])
         # response values
         y = define_response_lst(y_train, y_train)
         # fit the model
         reg_gbm['diurnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
-        reg_gbm['diurnal'][city].fit(X_train, y['day_train'])
+        reg_gbm['diurnal'][city].fit(X_train[city], y['day_train'])
         reg_gbm['nocturnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
-        reg_gbm['nocturnal'][city].fit(X_train, y['night_train'])
-    reg_gbm['covariates'] = X_train.columns
-    return(reg_gbm)
+        reg_gbm['nocturnal'][city].fit(X_train[city], y['night_train'])
+    reg_gbm['covariates'] = X_train[city].columns
+    return(reg_gbm, X_train)
 
+def loop_variable_selection(df, cities):
+    from datetime import datetime
+    vars_forward = {}
+    vars_forward['day'] = {}
+    vars_forward['night'] = {}
+    for city in ['all'] + cities:
+        for period in ['day','night']:
+            print('{}: Starting {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
+            vars_forward[period][city] = feature_selection(25, city, df, period)
+            print('{}: Completed {}, {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), city, period))
+    with open('data/variable_selection.pkl', 'wb') as f:
+        pickle.dump(vars_forward, f, pickle.HIGHEST_PROTOCOL)
 
 def feature_selection(holdout_num, city, df, period):
     '''
@@ -473,7 +548,7 @@ def feature_selection(holdout_num, city, df, period):
     variables = [var for var in variables if var not in ['city','area']]
     # subset for the city
     if city != 'all':
-        df_city = df[df['city']==city]
+        df_city = df[df['city']==city].copy()
     else:
         df_city = df.copy()
     # drop necessary variables
@@ -494,7 +569,7 @@ def feature_selection(holdout_num, city, df, period):
                 # no need to divide, but split into X and y
                 X_train, X_test, y_train, y_test = train_test_split(df_var, response, test_size=0.2)#, random_state=RANDOM_SEED)
                 # scale explanatory variables
-                X_train, X_test  = scale_X(X_train, X_test)
+                X_train, X_test  = scale_X(X_train.copy(), X_test.copy())
                 # response values
                 y = define_response_lst(y_train, y_test)
                 # fit the model
@@ -520,8 +595,6 @@ def feature_selection(holdout_num, city, df, period):
 ###
 # Plotting code
 ###
-
-
 def plot_density(df, cities):
     '''
     output density plots of the variables
@@ -575,7 +648,6 @@ def plot_density(df, cities):
         plt.savefig('fig/working/density/lst-vs-tr_night.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-
 def plot_holdout_points(loss):
     loss_plot = loss.unstack(level=0)
     loss_plot = loss_plot.unstack(level=0)
@@ -592,7 +664,7 @@ def plot_holdout_points(loss):
         "#8b8b8b",
     ]
     sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 22})
+    mpl.rcParams.update({'font.size': 20})
     g = sns.factorplot(orient="h", y="model", x="value", hue="city", linestyles='', markers=['v','o','^','x'],
     col = "loss", row = "time", data=loss_plot, sharex = 'col', order=['null','mlr','gbm'], aspect=2, scale=1.5)
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
@@ -646,34 +718,31 @@ def plot_holdouts():
         plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-def plot_importance(reg_gbm, cities):
+def plot_importance(reg_gbm, cities, show_plot=False):
     '''
     plot the feature importance of the variables and the cities
     '''
-    # cities = list(reg_gbm['diurnal'].keys())
-    cities = cities.copy()
+    cities =  cities.copy()
     cities.append('all')
     five_thirty_eight = [
         "#30a2da",
         "#fc4f30",
         "#e5ae38",
         "#6d904f",
-        "#8b8b8b",
-    ]
+        "#8b8b8b",]
     sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 22})
+    mpl.rcParams.update({'font.size': 20})
     # get the covariates - these will be the indices in the dataframe
-    header = pd.MultiIndex.from_product([cities,
-                                     ['diurnal','nocturnal']],
-                                    names=['city','time'])
+    header = pd.MultiIndex.from_product([['diurnal','nocturnal'], cities],
+                                    names=['time','city'])
     var_imp = pd.DataFrame(columns = header, index = list(reg_gbm['covariates']))
+    # loop the cities to add the var imp to the df
     for city in cities:
         for time in ['diurnal','nocturnal']:
-            var_imp.loc[:,(city, time)] = reg_gbm[time][city].feature_importances_
-    # sort the values on the mean of the nocturnal values
+            var_imp.loc[:,(time, city)] = reg_gbm[time][city].feature_importances_
     var_imp.loc[:,('nocturnal','mean')] = np.mean(var_imp.loc[:,'nocturnal'].drop('all',axis=1),axis=1)
     var_imp = var_imp.sort_values(by=('nocturnal','mean'),ascending=False)
-    # prepare the nocturnal values
+    # make the nocturnal values negative
     nocturnal = var_imp.loc[:,'nocturnal'].copy()
     nocturnal = nocturnal.drop('mean',axis=1)
     nocturnal['covariate'] = nocturnal.index
@@ -684,29 +753,79 @@ def plot_importance(reg_gbm, cities):
     diurnal.loc[:,'covariate'] = diurnal.index
     diurnal = pd.melt(diurnal,id_vars=['covariate'])
     # plot
+    fig, ax = plt.subplots()
+    fig.set_size_inches(15, 9)
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=nocturnal, palette = five_thirty_eight)
-
     ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=diurnal, palette = five_thirty_eight)
-    handles, labels = ax.get_legend_handles_labels()
     plt.xlabel('Variable Importance')
     plt.ylabel('Variables')
-    l = plt.legend(handles[0:4], labels[0:4], loc='lower right')
-    plt.savefig('fig/working/variable_importance_all.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
-    plt.clf()
+    # legend
+    handles, labels = ax.get_legend_handles_labels()
+    l = plt.legend(handles[0:5], labels[0:5], loc='lower right')
+    # zero line
+    [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
+    plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
+    plt.xlim(-0.4,0.4)
+    plt.tight_layout()
+    # save the figure
+    if show_plot:
+        plt.show()
+    else:
+        plt.savefig('fig/working/variable_importance_selected.pdf', format='pdf', dpi=1000, transparent=True)
+        plt.clf()
+    importance_order = var_imp.index.values
+    return(importance_order)
 
-def plot_partialdependence(num_vars, importance_order, reg_gbm):
+def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
     '''
     Plot the partial dependence for the different regressors
     '''
+    cities =  cities.copy()
+    cities.append('all')
+    # plot setup (surely this can be a function)
+    five_thirty_eight = [
+        "#30a2da",
+        "#fc4f30",
+        "#e5ae38",
+        "#6d904f",
+        "#8b8b8b",]
+    sns.set_palette(five_thirty_eight)
+    mpl.rcParams.update({'font.size': 20})
     # init subplots (left is nocturnal, right is diurnal)
-
+    fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey=True)#'row')
     # loop through the top n variables by nocturnal importance
-
-    # for each of the variables
-    # for each city
-    # add the partial dependence line to the subplot
-    # for the all city case, dash the line
-
+    feature = 0
+    for var_dependent in importance_order:
+        left_right = 0
+        for period in ['nocturnal', 'diurnal']:
+            for city in cities:
+                gbm = reg_gbm[period][city]
+                # feature position
+                feature_num = vars_selected.index(var_dependent)
+                # calculate the partial dependence
+                y, x = partial_dependence(gbm, feature_num, X = X_train[city],
+                                        grid_resolution = 100)
+                # add the line to the plot
+                if city=='all':
+                    axes[feature, left_right].plot(x[0],y[0],label=city, linestyle='--', color='#8b8b8b')
+                else:
+                    axes[feature, left_right].plot(x[0],y[0],label=city)
+                # add the label to the plot
+                axes[feature, left_right].set_xlabel(var_dependent)
+            left_right += 1
+        feature += 1
+    # legend
+    handles, labels = axes[0,0].get_legend_handles_labels()
+    # l = plt.legend(handles[0:5], labels[0:5], loc='lower left')
+    fig.legend(handles[0:5], labels[0:5], loc='lower center', bbox_to_anchor=(0.5,-0.007),
+              fancybox=True, shadow=True, ncol=5)
+    # save the figure
+    fig.tight_layout()
+    if show_plot:
+        fig.show()
+    else:
+        fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
+        fig.clf()
 
 if __name__ == '__main__':
     # profile() # initialise the board
