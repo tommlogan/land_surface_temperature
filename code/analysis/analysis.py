@@ -45,37 +45,37 @@ def main():
     df = transform_data(df)
 
     # present the data - density plot
-    # plot_density(df, cities)
-    #
-    # # regression
-    # ## train on three cities, test on one
-    # loss = regression_cityholdouts(df, cities)
-    # # plot the points
-    # plot_holdout_points(loss)
-    #
-    # ## for each city, train and test
-    # sim_num = 100
-    # regressions(df, cities, sim_num)
-    # plot_holdouts()
-    #
-    # # variable importance and partial dependence
-    # reg_gbm = full_gbm_regression(df, cities)
-    #
-    # # variable selection
-    # loop_variable_selection(df, cities)
+    plot_density(df, cities)
+
+    # regression
+    ## train on three cities, test on one
+    loss = regression_cityholdouts(df, cities)
+    # plot the points
+    plot_holdout_points(loss)
+
+    ## for each city, train and test
+    sim_num = 100 # number of holdouts
+    regressions(df, cities, sim_num)
+    plot_holdouts()
+
+    # variable importance and partial dependence
+    reg_gbm = full_gbm_regression(df, cities)
+
+    # variable selection
+    loop_variable_selection(df, cities)
 
     # based on the results of the variable selection, rerun the regression and
     # create the variable importance plots
     #vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min_sl', 'elev_max', 'tree_max_sl']
     # vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'alb_mean_min', 'elev_min_sl', 'ndvi_mean_min']
-    vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min', 'alb_mean_min_sl', 'elev_max']
-    reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
-    #
-    # # plot the variable importance
-    importance_order = plot_importance(reg_gbm, cities)
-    #
-    # # plot the partial dependence
-    plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
+    # vars_selected = ['tree_mean', 'ndvi_mean_mean', 'alb_mean_mean', 'elev_min', 'alb_mean_min_sl', 'elev_max']
+    # reg_gbm, X_train = full_gbm_regression(df, cities, vars_selected)
+    # #
+    # # # plot the variable importance
+    # importance_order = plot_importance(reg_gbm, cities)
+    # #
+    # # # plot the partial dependence
+    # plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
 def import_data(cities):
     df = pd.DataFrame()
