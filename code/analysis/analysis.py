@@ -120,7 +120,7 @@ def transform_data(df):
         df[var_lcov] = df[var_lcov]/area_max
 
     # drop rows with water more than 20% of area
-    df = df.loc[df['lcov_11'] < 0.2]
+    # df = df.loc[df['lcov_11'] < 0.2]
 
     # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
     tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
@@ -272,6 +272,8 @@ def prepare_lst_prediction(df):
 
     # drop lcov variables
     vars_lcov = [i for i in df.columns.values if 'lcov' in i]
+    # keep water (lcov_11)
+    vars_lcov = [i for i in vars_lcov if '11' not in i]
     df = df.drop(vars_lcov, axis=1)
 
     # drop impervious variables because they are 1:1 correlated with tree canopy
