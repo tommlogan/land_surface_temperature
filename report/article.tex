@@ -84,31 +84,53 @@ Understanding the drivers of urban land thermal radiance, a key factor of land s
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/holdout_results_r2.pdf}
 \caption{The out-of-bag R$^2$ of the models when fitted on each city and used to predict a random sample from the same city. Out-of-bag R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.}
-\label{fig:cityholdout_errors}
+\label{fig:intracity}
 \end{center}
 \end{figure}
 
 
 \subsection{Predicting Land Surface Temperature Between Cities}
 
+See figure \ref{fig:intercity}.
+
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/cities_holdout.pdf}
-\caption{The out-of-bag R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. Out-of-bag R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.}
-\label{fig:cityholdout_errors}
+\caption{The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.}
+\label{fig:intercity}
 \end{center}
 \end{figure}
 
 
-\section{Conclusion}
+\section{Drivers of LST}
 
-There are various bibliography styles available. You can select the style of your choice in the preamble of this document. These styles are Elsevier styles based on standard styles like Harvard and Vancouver. Please use Bib\TeX\ to generate your bibliography and include DOIs whenever available.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=\textwidth]{fig/report/variable_importance_selected.pdf}
+\caption{}
+\label{fig:importance}
+\end{center}
+\end{figure}
 
-Here are two sample references: \cite{Feynman1963118,Dirac1953888}.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=\textwidth]{fig/report/partial_dependence.pdf}
+\caption{}
+\label{fig:importance}
+\end{center}
+\end{figure}
 
-\section*{References}
 
-\bibliography{mybibfile}
+
+% \section{Conclusion}
+
+% There are various bibliography styles available. You can select the style of your choice in the preamble of this document. These styles are Elsevier styles based on standard styles like Harvard and Vancouver. Please use Bib\TeX\ to generate your bibliography and include DOIs whenever available.
+
+% Here are two sample references: \cite{Feynman1963118,Dirac1953888}.
+
+% % \section*{References}
+
+% \bibliography{mybibfile}
 
 \appendix
 \section{2013 Land Surface Temperature Image}
