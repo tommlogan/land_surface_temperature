@@ -120,7 +120,7 @@ def transform_data(df):
         df[var_lcov] = df[var_lcov]/area_max
 
     # drop rows with water more than 20% of area
-    # df = df.loc[df['lcov_11'] < 0.2]
+    df = df.loc[df['lcov_11'] < 0.2]
 
     # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
     tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
