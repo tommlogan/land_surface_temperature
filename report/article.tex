@@ -70,6 +70,8 @@ Understanding the drivers of urban land thermal radiance, a key factor of land s
 \linenumbers
 
 \section{Introduction}
+In a warming world, understanding the drivers of surface temperatures during both the day and night will aid in adapting cities to mitigate urban heat for the health and well being of communities.
+
 
 
 \section{Data and Methods}
@@ -103,20 +105,24 @@ See figure \ref{fig:intercity}.
 
 
 \section{Drivers of LST}
+See figure \ref{fig:importance} and \ref{fig:pdp}.
+
+Regarding Fig \ref{fig:pdp}, I think I will remove the ``all" line, because in cases such as $alb_mean_min_sl$ (which is the minimum albedo in the surrounding cells (sl = spatial lag)) the values between the cities don't overlap so I think it becomes a proxy for other differences between the city when regressed together.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/variable_importance_selected.pdf}
-\caption{}
+\caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
+In this case there is generally little difference between the importance of day and night variables.}
 \label{fig:importance}
 \end{center}
 \end{figure}
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=\textwidth]{fig/report/partial_dependence.pdf}
-\caption{}
-\label{fig:importance}
+\includegraphics[height=\textheight]{fig/report/partial_dependence.pdf}
+\caption{Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.}
+\label{fig:pdp}
 \end{center}
 \end{figure}
 
