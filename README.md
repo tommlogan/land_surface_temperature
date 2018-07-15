@@ -72,7 +72,26 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is a plot of the mean LST for Baltimore
     ![image](fig/map/lst_day_mean.jpg)
 
+    30m resolution
 
+#### 1.5 Job density
+This data is available [here](https://lehd.ces.census.gov/data/lodes/LODES7/md/wac/). The WAC data provides work locations. JT01 is for primary jobs. S000 is for total number of jobs with no filters on age or income. The codebook is [here](https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.3.pdf).
+
+#### 1.6 Building floor area shapefile
+https://github.com/Microsoft/USBuildingFootprints
+
+#### 1.7 Lidar
+I could estimate the  
+* mean building height: https://developmentseed.org/blog/2014/08/07/processing-lidar-point-cloud/
+* or, i could just get an estimate of mean lidar height (which is an estimate of development)
+
+| City | Source |  Year |
+| Baltimore | http://imap.maryland.gov/Pages/lidar-download-files.aspx | |
+| Phoenix | https://asu.maps.arcgis.com/apps/Embed/index.html?webmap=a7da66e467bd43ed8d5f686637ec0ee5&extent=-112.6892,33.1391,-111.3331,33.8258&home=true&zoom=true&scale=false&search=true&searchextent=true&details=true&legendlayers=true&active_panel=legend&disable_scroll=false&theme=dark | |
+| Portland | https://gis.dogami.oregon.gov/maps/lidarviewer/ | |
+| Detroit | https://coast.noaa.gov/htdata/lidar1_z/geoid12a/data/4809/ | 2009 |
+
+https://gisgeography.com/top-6-free-lidar-data-sources/
 
 ### 2 Prepare land cover, tree canopy, impervious surface, elevation data
 This actually occurs during the code `clip_geographic_data.R` which is called during the previous step.
@@ -97,8 +116,8 @@ I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `cod
 
     Table 1: variables collected and their units
 
-| var-name      | Description   | Unit  |
-| ------------- |:-------------| -----:|
+| var-name      | Description   | Unit  | Source |
+| ------------- |:-------------| -----:| --- |
 | lst_day_mean  | land surface temperature during the day (averaged over different images ) | oC |
 | lst_night_mean  | as above, but night images      |   oC |
 | alb_mean | albedo during the day, averaged over different images      |    an index (divide by 100 to normalize) |
@@ -106,3 +125,5 @@ I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `cod
 | tree | tree canopy cover   |     |
 | imp | % impervious surface |   % [0,1] |
 | lc_# | area within grid cell that is of land cover type # (see https://www.mrlc.gov/nlcd11_leg.php for the number definitions)     | m2 |
+| ntl_mean | nighttime light | | https://www.ngdc.noaa.gov/eog/dmsp/downloadV4composites.html |
+| job_density | | | https://lehd.ces.census.gov/data/lodes/LODES7/md/wac/ |
