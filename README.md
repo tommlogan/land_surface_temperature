@@ -7,22 +7,20 @@ Understanding the factors influencing urban land surface temperature during the 
 
 ## Cities analysed:
 * [x] Baltimore (bal)
-* [ ] Chicago (chi)
 * [ ] Detroit (det)
 * [ ] Phoenix (phx)
 * [ ] Portland (por)
-
-I'd like to add three cities from non-industrialized countries to see if the results are generalizable?
-* [ ] Accra, Ghana (acr) - I'm not sure if the sat images are clear enough
-* [ ] Kolkata, India (kol)
-* [ ] Manila, Philippines (man)
-* [ ] Nairobi, Kenya (nai) - AS has a paper on nai already, so data must be available
+* [ ] ?Atlanta (atl)
 
 ## Steps:
+1. Collect the raw data
 1. Process the LandSat images to land surface temperatures
 2. Prepare other images (tree canopy, land cover, impervious surface)
 3. Grid the data for analysis as necessary
 2. Statistical analysis
+
+### 1. Raw data
+
 
 ### 1. LandSat images to LST, albedo, and NDVI:
 
