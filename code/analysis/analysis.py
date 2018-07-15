@@ -763,7 +763,7 @@ def plot_importance(reg_gbm, cities, show_plot=False):
     plt.ylabel('Variables')
     # legend
     handles, labels = ax.get_legend_handles_labels()
-    l = plt.legend(handles[0:5], labels[0:5], loc='lower right')
+    l = plt.legend(handles[0:len(cities)], labels[0:len(cities)], loc='lower right')
     # zero line
     [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
     plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
