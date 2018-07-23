@@ -829,6 +829,44 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
         fig.clf()
 
+
+def scatter_lst(df, cities):
+    '''
+    scatter lst night vs day
+    '''
+
+    # scatter plot thermal radiance against land surface, colored by city
+    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
+    with plt.style.context('fivethirtyeight'):
+        for i in range(len(cities)):
+            city = cities[i]
+            df_city = df.loc[df['city']==city]
+            plt.scatter(df_city['lst_day_mean_mean'], df_city['lst_night_mean_mean'], label = city, alpha = 0.5)
+        plt.legend(loc='lower right')
+        plt.xlabel('Day LST ($^o$C)')
+        plt.ylabel('Night LST ($^o$C)')
+        plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean_mean'].corr(df_city['lst_night_mean_mean'])), ha='left', va='top')
+        plt.savefig('fig/working/density/lst_night-vs-day.pdf', format='pdf', dpi=300, transparent=True)
+        plt.clf()
+
+def joyplot_lst(df, cities):
+    '''
+    scatter lst night vs day
+    '''
+
+    # scatter plot thermal radiance against land surface, colored by city
+    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
+    import joypy
+    df1 = df[['lst_night_mean_mean','lst_day_mean_mean','city']]
+    df1 = df1.rename(index=str, columns={"lst_night_mean_mean": "night", "lst_day_mean_mean": "day"})
+    df1 = df1.replace([np.inf, -np.inf], np.nan)
+    df1 = df1.dropna(axis=0, how='any')
+    with plt.style.context('fivethirtyeight'):
+        fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
+        plt.xlabel('Land Surface Temperature ($^o$C)')
+    plt.savefig('fig/working/density/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
+    plt.clf()
+
 if __name__ == '__main__':
     # profile() # initialise the board
     main()
