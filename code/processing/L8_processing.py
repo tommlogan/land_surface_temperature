@@ -84,8 +84,9 @@ def process_image(info_satellite, source_city):
     # create map of land surface temperature
     calc_LST(info_satellite, meta_dict, source_city)
 
-    # create nvdi map
+    # create nvdi and nbdi map
     calc_NDVI(info_satellite)
+    calc_NBDI(info_satellite)
 
     # create map of albedo
     calc_albedo(info_satellite, meta_dict)
@@ -365,6 +366,30 @@ def calc_NDVI(info_satellite):
     # save NVDI
     fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(info_satellite['city'], 'ndvi', info_satellite['date'], info_satellite['day_night'])
     array_to_raster(ndvi, fn_out, ds)
+
+def calc_NBDI(info_satellite):
+    '''
+        calculate the NBDI
+        For landsat8 it's (B6 – B5) / (B6 + B5)
+    '''
+    logger.info('Calculating the nbdi')
+    # import bands
+    landsat_band = dict()
+    band = 1
+    for band in [1,2,3,4,5]:
+        fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
+        ds = gdal.Open(fn_sat)
+        landsat_band[band] = ds.ReadAsArray()
+
+    # calculate the NDVI
+    nbdi = (landsat_band[6] - landsat_band[5])/(landsat_band[5] + landsat_band[6])
+
+    # removing no data
+    nbdi[landsat_band[band] < 0] = np.nan
+
+    # save NVDI
+    fn_out = 'data/processed/image/{}/{}_{}_{}.tif'.format(info_satellite['city'], 'nbdi', info_satellite['date'], info_satellite['day_night'])
+    array_to_raster(nbdi, fn_out, ds)
 
 
 def array_to_raster(output, out_filename, ds):
