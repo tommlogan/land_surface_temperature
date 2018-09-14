@@ -20,7 +20,8 @@ Understanding the factors influencing urban land surface temperature during the 
 2. Statistical analysis
 
 ### 1. Raw data
-
+#### Nighttime Light Intensity
+This will be gridded with the nearest raster point.
 
 ### 1. LandSat images to LST, albedo, and NDVI:
 
@@ -77,11 +78,19 @@ This data is available [here](https://lehd.ces.census.gov/data/lodes/LODES7/md/w
 
 #### 1.6 Building floor area shapefile
 https://github.com/Microsoft/USBuildingFootprints
+This is then clipped to the city boundary with `processing\footprint.R`.
+
 
 #### 1.7 Lidar
 I could estimate the  
 * mean building height: https://developmentseed.org/blog/2014/08/07/processing-lidar-point-cloud/
 * or, i could just get an estimate of mean lidar height (which is an estimate of development)
+
+When a lidar point cloud is available (like in the case of Baltimore) it is imported as a LasDataset and then using the `LAS Dataset to Raster` tool, a raster is created.
+When a set of tif tiles is available (like from NOAA), create a new raster catalog (left click on a geodb in ArcMap), add the files to the dataset, then using the `Raster Catalog to Raster Dataset` tool.
+
+The sky view factor is calculated using the DSM in the code `processing\calc_svf.R`.
+
 
 | City | Source |  Year |
 | Baltimore | http://imap.maryland.gov/Pages/lidar-download-files.aspx | |
