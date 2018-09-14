@@ -47,7 +47,7 @@ main = function(data.fn,a=1){
   ## USER INPUTS
   #######
   # what is the square grid size in meters?
-  gridSize = 500
+  gridSize = 100 #500
   # what is minimum grid area you'll include?
   minGridArea = 0
   # what projection are you using? 
@@ -64,7 +64,7 @@ main = function(data.fn,a=1){
   for (city.name in cities){
     # get city database
     database <- database.complete[database.complete$City == city.name,]
-    print(paste0(Sys.time(), ': Beginning to grid the data for ', city.name))
+    print(paste0(Sys.time(), ': Beginning to grid the data for ', city.name, ' at ', gridSize, 'm'))
     
     ####
     ## Create grid
@@ -138,7 +138,7 @@ main = function(data.fn,a=1){
     dir.previous <- getwd()
     setwd(dir.save)
     # what is the output filename?
-    outputFileName <- paste(tolower(city.name),'_data',sep='')
+    outputFileName <- paste(tolower(city.name),'_data_',gridSize,sep='')
     outvar.name <- paste0('data.',tolower(city.name))
     
     ####
