@@ -1,0 +1,16 @@
+Path,FileName,City,varName,Description,fileType,dataType,projection_epsg
+processed,por_boundary,por,city,city boundary,.shp,areaLevel,32126
+processed/image,lst_mean_day,por,lst_day,land surface temperature,.tif,raster,32126
+processed/image,lst_mean_night,por,lst_night,land surface temperature,.tif,raster,32126
+processed/image,albedo_mean_day,por,alb,albedo,.tif,raster,32126
+processed/image,ndvi_mean_day,por,ndvi,vegetation index,.tif,raster,32126
+processed,NLCD2011_LC_por,por,lcov,National land cover database 2011,.tif,rasterCategory,32126
+processed,NLCD2011_CAN_por,por,tree,tree canopy cover,.tif,raster,32126
+processed,NLCD2011_IMP_por,por,imp,impervious surface percent,.tif,raster,32126
+processed/image,nbdi_mean_day,por,nbdi,vegetation index,.tif,raster,32126
+processed,por_pop_density,por,pdens,population density,.tif,raster,32126
+processed,por_bldgs,por,bldg,building footprint,.shp,polyIntersect,32126
+processed,por_ntl,por,ntl,Night time light,.tif,raster,32126
+processed,por_svf_6,por,svf,Elevation in meters,.tif,raster,32126
+processed,por_elevation,por,elev,Elevation in meters,.tif,raster,32126
+processed,por_dsm,por,dsm,digital surface,.tif,raster,32126

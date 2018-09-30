@@ -1,0 +1,16 @@
+Path,FileName,City,varName,Description,fileType,dataType,projection_epsg
+processed,phx_boundary,phx,city,city boundary,.shp,areaLevel,26949
+processed/image,lst_mean_day,phx,lst_day,land surface temperature,.tif,raster,26949
+processed/image,lst_mean_night,phx,lst_night,land surface temperature,.tif,raster,26949
+processed,phx_pop_density,phx,pdens,population density,.tif,raster,26949
+processed,phx_bldgs,phx,bldg,building footprint,.shp,polyIntersect,26949
+processed/image,albedo_mean_day,phx,alb,albedo,.tif,raster,26949
+processed/image,ndvi_mean_day,phx,ndvi,vegetation index,.tif,raster,26949
+processed,NLCD2011_LC_phx,phx,lcov,National land cover database 2011,.tif,rasterCategory,26949
+processed,NLCD2011_CAN_phx,phx,tree,tree canopy cover,.tif,raster,26949
+processed,NLCD2011_IMP_phx,phx,imp,impervious surface percent,.tif,raster,26949
+processed/image,nbdi_mean_day,phx,nbdi,vegetation index,.tif,raster,26949
+processed,phx_ntl,phx,ntl,Elevation in meters,.tif,raster,26949
+processed,phx_svf_6,phx,svf,Elevation in meters,.tif,raster,26949
+processed,phx_dsm,phx,dsm,Elevation in meters,.tif,raster,26949
+processed,phx_elevation,phx,elev,Elevation in meters,.tif,raster,26949
