@@ -110,6 +110,10 @@ I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `cod
   4. run the code's function `main('data_to_grid.csv')`
   5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area - which i've done somewhere...
 
+### Data Cleaning
+1. Remove the `ntl_var` variables. There are too many NaNs because the variance is so little and the data source resolution is so low.
+2.
+
 ### 4 Exploratory data analysis
   1. See the Jupyter notebook `explore.ipynb`
 
