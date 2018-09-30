@@ -5,7 +5,7 @@ Output is a csv with data for analysis
 
 # import libraries
 import pandas as pd
-
+import numpy as np
 
 def main():
     
@@ -23,33 +23,63 @@ def main():
         df_city['city'] = city
         # bind to complete df
         df = df.append(df_city, ignore_index=True)
-    scaling_all(df)
+    # apply transformation on entire dataset
+    df = scaling_all(df)
+    # write to csv
+    df.to_csv('data/data_regressions.csv')
 
 
 def scaling_city(df_city):
     '''
-    scale the variables which are city specific (e.g. elevation has the city mean removed before other scaling
+    scale the variables which are city specific (e.g. elevation has the city mean removed before [0,1] scaling)
     '''
     
+    vars_all = df_city.columns.values
+
     ### ADMIN ###
-    df = df.drop(['Unnamed: 0', 'cId'], axis = 1)
+    df_city = df_city.drop(['Unnamed: 0', 'cId'], axis = 1)
     # outside city limits
-    df = df[df['area'] > 0]
-    
+    df_city = df_city[df_city['area'] > 0]
+
     ### NaN variables
     # remove night time lights (not enough variance to get standard deviation)
-    df = df.drop(['ntl_sd','ntl_sd_sl'], axis=1)
+    df_city = df_city.drop(['ntl_sd','ntl_sd_sl'], axis=1)
     # drop any nan rows and report how many dropped
-    df = df.dropna(axis=0, how='any')
+    df_city = df_city.dropna(axis=0, how='any')
     
     ### Elevation ###
-    
+    # subtract the mean from all of the elevation variables (except standard deviation)
+    # list elev vars
+    vars_elev = [i for i in vars_all if 'elev' in i]
+    # remove sd vars
+    vars_elev = [x for x in vars_elev if 'sd' not in x]
+    # calculate the mean of each
+    elev_means = df_city[vars_elev].mean(axis=0)
+    df_city[vars_elev] = df[vars_elev] - elev_means
     
     ### DSM ###
-    
+    # subtract the mean from all of the dsm variables (except standard deviation)
+    # list dsm vars
+    vars_dsm = [i for i in vars_all if 'dsm' in i]
+    # remove sd vars
+    vars_dsm = [x for x in vars_dsm if 'sd' not in x]
+    # calculate the mean of each
+    dsm_means = df_city[vars_dsm].mean(axis=0)
+    df_city[vars_dsm] = df[vars_dsm] - dsm_means
     
     ### LST ###
+    # drop the lst vars except night and day mean
+    vars_response = ['lst_day_mean','lst_night_mean']
+    vars_lst = [i for i in vars_all if 'lst' in i]
+    # remove vars to keep
+    vars_lst_drop = [x for x in vars_lst if x not in vars_response]
+    # drop vars
+    df = df.drop(vars_lst_drop, axis=1)
+    # calculate the mean of each
+    lst_means = df_city[vars_response].mean(axis=0)
+    df_city[vars_response] = df[vars_response] - lst_means
     
+    return(df_city)
 
     
 def scaling_all(df):
@@ -75,8 +105,21 @@ def scaling_all(df):
     vars_lcov = [i for i in vars_lcov if '11' not in i]
     df = df.drop(vars_lcov, axis=1)
     
-    ### Tree canopy ###
+    ### Drop impervious surface
+    vars_imp = [i for i in vars_all if 'imp' in i]
+    df = df.drop(vars_lcov, axis=1)
     
+    ### Building area
+    # set the building area as a percent of the cell's area
+    df.bldg = df.bldg/df.area 
     
+    # Transform to [0,1]
+    vars_indep = [i for i in vars_all if 'lst' not in i]
+    for indep_var in vars_indep:
+        # calc max and min
+        var_min = np.min(df[indep_var])
+        var_max = np.max(df[indep_var])
+        # transform to [0,1]
+        df[indep_var] = (df[indep_var] - var_min) / (var_max - var_min)
     
-    ### Standard Deviation ###
+    return(df)
