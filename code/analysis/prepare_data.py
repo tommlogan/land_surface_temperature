@@ -115,7 +115,7 @@ def scaling_all(df):
     df.bldg = df.bldg/df.area 
     
     # Transform to [0,1]
-    vars_indep = [i for i in vars_all if 'lst' not in i and i != 'x' and i != 'y']
+    vars_indep = [i for i in vars_all if 'lst' not in i and i not in ['x','y','holdout']]
     for indep_var in vars_indep:
         # calc max and min
         var_min = np.min(df[indep_var])
