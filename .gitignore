@@ -24,3 +24,4 @@ maps
 venv
 .Rproj.user
 Index
+*.tbx
