@@ -10,6 +10,7 @@ import numpy as np
 def main():
     
     cities = ['bal','det','phx','por']
+    grid_size = 500
     # init all city dataframe
     df = pd.DataFrame()
     for city in cities:
@@ -18,7 +19,7 @@ def main():
         # scale city specific variables
         df_city = scaling_city(df_city)
         # add the grid group numbers
-        
+        df_city = holdout_grid(df_city)
         # append city name to df
         df_city['city'] = city
         # bind to complete df
@@ -26,7 +27,7 @@ def main():
     # apply transformation on entire dataset
     df = scaling_all(df)
     # write to csv
-    df.to_csv('data/data_regressions.csv')
+    df.to_csv('data/data_regressions_{}.csv'.format(grid_size))
 
 
 def scaling_city(df_city):
@@ -114,7 +115,7 @@ def scaling_all(df):
     df.bldg = df.bldg/df.area 
     
     # Transform to [0,1]
-    vars_indep = [i for i in vars_all if 'lst' not in i]
+    vars_indep = [i for i in vars_all if 'lst' not in i and i != 'x' and i != 'y']
     for indep_var in vars_indep:
         # calc max and min
         var_min = np.min(df[indep_var])
@@ -123,3 +124,32 @@ def scaling_all(df):
         df[indep_var] = (df[indep_var] - var_min) / (var_max - var_min)
     
     return(df)
+
+
+def holdout_grid(df_city):
+    '''
+    assign each row a spatial cell group number. 
+    holdouts will be done at the cell group to avoid overfitting
+    '''
+    # how many cells
+    cell_size = 8
+    coords = np.unique(df_city.x), np.unique(df_city.y)
+    n_cells = round(len(coords[0]) / cell_size), round(len(coords[1]) / cell_size)
+    # what are the coord cutoffs
+    cutoffs_x = [coords[0][cell_size*i-1] for i in range(1,n_cells[0])] + [np.max(coords[0])]    
+    cutoffs_y = [coords[1][cell_size*i-1] for i in range(1,n_cells[1])] + [np.max(coords[1])]
+    # assign a number to each of the rows as to which cell group it is in
+    df_city['holdout'] = None
+    for index, r in df_city.iterrows():
+        r_ix = np.searchsorted(cutoffs_x,r.x)
+        r_iy = np.searchsorted(cutoffs_y,r.y)
+        df_city.loc[index, 'holdout'] = r_iy * n_cells[0] + r_ix
+        
+    return(df_city)
+        
+    
+    
+    
+    
+    
+    
