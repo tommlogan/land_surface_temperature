@@ -86,7 +86,7 @@ I could estimate the
 * mean building height: https://developmentseed.org/blog/2014/08/07/processing-lidar-point-cloud/
 * or, i could just get an estimate of mean lidar height (which is an estimate of development)
 
-When a lidar point cloud is available (like in the case of Baltimore) it is imported as a LasDataset and then using the `LAS Dataset to Raster` tool, a raster is created.
+When a lidar point cloud is available (like in the case of Baltimore) it is imported as with `Create LAS Dataset` and then using the `LAS Dataset to Raster` tool, a raster is created.
 When a set of tif tiles is available (like from NOAA), create a new raster catalog (left click on a geodb in ArcMap), add the files to the dataset, then using the `Raster Catalog to Raster Dataset` tool.
 
 The sky view factor is calculated using the DSM in the code `processing\calc_svf.R`.
