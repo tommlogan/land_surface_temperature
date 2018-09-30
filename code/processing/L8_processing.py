@@ -9,6 +9,7 @@ Output:
         land surface temperature (oC)
         albedo
         ndvi
+        nbdi
 
 Notes:
         It is essential that the two raster files have the same:
@@ -72,8 +73,9 @@ def process_image(info_satellite, source_city):
     '''
         1. Reads in metadata
         2. Creates map of land surface temperature
-        3. Creates map of NVDI
-        4. Creates map of albedo
+        3. Creates map of NDVI
+        4. Creates map of NBDI
+        5. Creates map of albedo
     '''
     # read metadata
     meta_dict = read_metadata(info_satellite)
@@ -84,7 +86,7 @@ def process_image(info_satellite, source_city):
     # create map of land surface temperature
     calc_LST(info_satellite, meta_dict, source_city)
 
-    # create nvdi and nbdi map
+    # create ndvi and nbdi map
     calc_NDVI(info_satellite)
     calc_NBDI(info_satellite)
 
@@ -104,7 +106,7 @@ def read_metadata(info_satellite):
 
     # list of variables needed from metadata
     meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
-    bands = [1,2,3,4,5,10]
+    bands = [1,2,3,4,5,6,10]
     # include radiance re-scaling factors
     for rad in ['MULT', 'ADD']:
         for b in bands:
@@ -155,7 +157,7 @@ def clip_geographic_data(info_satellite, source_city):
     fn_impervious_surface = source_city['impervious'][city_idx].values[0]
     fn_elevation = source_city['elevation'][city_idx].values[0]
     fn_boundary = source_city['city_parcels'][city_idx].values[0]
-    bands = '1,2,3,4,5,10'
+    bands = '1,2,3,4,5,6,10'
     # args into list - order does not matter, it is sorted at the bottom of the R script
     args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands, fn_tree_canopy, fn_impervious_surface, fn_elevation]
 
@@ -376,7 +378,7 @@ def calc_NBDI(info_satellite):
     # import bands
     landsat_band = dict()
     band = 1
-    for band in [1,2,3,4,5]:
+    for band in [1,2,3,4,5, 6]:
         fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
         landsat_band[band] = ds.ReadAsArray()
@@ -431,7 +433,7 @@ def image_mean(images_meta, day_night, city):
         save
     '''
     # loop through the image types
-    image_types = ['lst', 'ndvi', 'albedo', 'thermal-radiance']
+    image_types = ['lst', 'ndvi', 'albedo', 'thermal-radiance','nbdi']
     for image_type in image_types:
         logger.info('Calculating the mean: {}, {}, {}'.format(city, image_type, day_night))
         # create a dict for the images
