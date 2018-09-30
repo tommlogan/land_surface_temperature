@@ -325,8 +325,8 @@ areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
       load(gridded_filename)
     }  else {
       
-      if (proj4string(sg_temp) != proj4string(sf)){
-        sf = spTransform(sf, CRS(proj4string(sg_temp)))
+      if (proj4string(sg) != proj4string(sf)){
+        sf = spTransform(sf, CRS(proj4string(sg)))
       }
       # address geometry issues
       sf_buffer <- function(sf) {
