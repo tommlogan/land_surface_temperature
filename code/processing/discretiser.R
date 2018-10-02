@@ -36,6 +36,7 @@ library(maptools)
 library(parallel)
 library(spex)
 library(pbapply)
+library(data.table)
 
 no_cores <<- floor(detectCores() - 4) # Calculate the number of cores
 kPathGriddedData <- file.path('data', 'processed', 'grid')
@@ -114,6 +115,13 @@ main = function(data.fn,a=1, gridSize = 500){
       print(i)
       print(length(sg))
       
+      # save temp
+      today = Sys.Date()
+      date_str = format(today,format="%Y-%m-%d")
+      dir.save = file.path(kPathGriddedData, city.name, date_str)
+      dir.create(dir.save)
+      outputFileName <- paste(tolower(city.name),'_data_',gridSize,'_temp',sep='')
+      fwrite(sg@data,paste0(dir.save,'/',outputFileName,'.csv'))
     }
     
     ####
