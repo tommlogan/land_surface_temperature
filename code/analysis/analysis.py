@@ -18,12 +18,12 @@ import code
 pd.options.mode.chained_assignment = 'raise'
 
 # regression libraries
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble.partial_dependence import partial_dependence
 from sklearn.metrics import mean_squared_error, r2_score
-# from xgboost import XGBRegressor
+from pyearth import Earth
+from pygam import LinearGAM
 
 # init logging
 import sys
