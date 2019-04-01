@@ -25,3 +25,4 @@ venv
 .Rproj.user
 Index
 *.tbx
+**/.ipynb_checkpoints
