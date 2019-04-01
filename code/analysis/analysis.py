@@ -103,15 +103,16 @@ def regressions(df, cities, sim_num):
         # response values
         y = define_response_lst(y_train, y_test)
         # apply the null model
-        loss_null = regression_null(y, city, predict_quant)
+        loss = regression_null(y, city, predict_quant, loss)
         # now the GradientBoostingRegressor
-        loss_gbm = regression_gradientboost(X_train, y, X_test, city, predict_quant)
+        loss = regression_gradientboost(X_train, y, X_test, city, predict_quant, loss)
         # finally, multiple linear regression
-        loss_mlr = regression_linear(X_train, y, X_test, city, predict_quant)
+        loss = regression_linear(X_train, y, X_test, city, predict_quant, loss)
         # join the loss functions
         loss_city = pd.concat([loss_null, loss_mlr, loss_gbm])
         # print(loss_city)
         loss = loss.append(loss_city)
+    # save results
     loss.to_csv('data/regression/holdout_results.csv')
 
 
@@ -193,7 +194,7 @@ def define_response_lst(y_train, y_test):
 # Regression code
 ###
 
-def regression_null(y, city, predict_quant):
+def regression_null(y, city, predict_quant, loss):
     '''
     fit the null model for comparison
     '''
@@ -215,21 +216,21 @@ def regression_null(y, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
 
-def regression_gradientboost(X_train, y, X_test, city, predict_quant):
+def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
     '''
@@ -255,21 +256,21 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
 
-def regression_linear(X_train, y, X_test, city, predict_quant):
+def regression_linear(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the multiple linear regressions
     '''
@@ -295,21 +296,21 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
 
-def regression_randomforest(X_train, y, X_test, city, predict_quant):
+def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
     '''
@@ -334,21 +335,21 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
 
-def regression_mars(X_train, y, X_test, city, predict_quant):
+def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
     '''
@@ -373,21 +374,21 @@ def regression_mars(X_train, y, X_test, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
 
-def regression_gam(X_train, y, X_test, city, predict_quant):
+def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
     '''
@@ -412,16 +413,16 @@ def regression_gam(X_train, y, X_test, city, predict_quant):
     r2_night = r2_score(y['night_test'], predict_night)
 
     # record results
-    loss = pd.DataFrame({
+    loss = loss.append({
         'time_of_day': 'diurnal',
         'hold_num': city,
         'model': model,
         'error_metric': 'r2',
         'error': r2_day
-    })
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
 
