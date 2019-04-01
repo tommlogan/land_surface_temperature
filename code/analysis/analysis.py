@@ -189,29 +189,23 @@ def define_response_lst(y_train, y_test):
     y['night_test'] = y_test['lst_night_mean']
     return(y)
 
+###
+# Regression code
+###
 
 def regression_null(y, city, predict_quant):
     '''
     fit the null model for comparison
     '''
     # train the model
+    model = 'null'
 
     # predict the model
     predict_day = np.ones(len(y['day_test'])) * np.mean(y['day_train'])
     predict_night = np.ones(len(y['night_test'])) * np.mean(y['night_train'])
 
-    xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
-    with plt.style.context('fivethirtyeight'):
-        # plot predict vs actual
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Null model \n {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_null_{}.pdf'.format(predict_quant, city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'null', city, predict_quant)
 
     # calculate the MAE
     mae_day = np.mean(abs(predict_day - y['day_test']))
@@ -219,14 +213,19 @@ def regression_null(y, city, predict_quant):
     # code.interact(local=locals())
     r2_day = r2_score(y['day_test'], predict_day)
     r2_night = r2_score(y['night_test'], predict_night)
-    # print('\n \nNull model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['null'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
+
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+
     return(loss)
 
 
@@ -234,7 +233,7 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant):
     '''
     fit the GradientBoostingRegressor
     '''
-    # print(X_train.columns.values)
+    model = 'gbrf'
     # train the model
     gbm_day_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
     gbm_night_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
@@ -247,31 +246,26 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant):
     predict_night = gbm_night_reg.predict(X_test)
 
     # plot predict vs actual
-    xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
-    with plt.style.context('fivethirtyeight'):
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Gradient Boosted Trees \n {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_gbrf_{}.pdf'.format(predict_quant, city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
-    # calculate the MAE
+    # calculate the error metrics
     mae_day = np.mean(abs(predict_day - y['day_test']))
     mae_night = np.mean(abs(predict_night - y['night_test']))
     r2_day = r2_score(y['day_test'], predict_day)
     r2_night = r2_score(y['night_test'], predict_night)
-    # print('\n \nGradient Boosted Trees model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['gbm'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
+
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+
     return(loss)
 
 
@@ -279,7 +273,7 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     '''
     fit the multiple linear regressions
     '''
-    # print(X_train.columns.values)
+    model = 'mlr'
     # train the model
     mlr_day_reg = LinearRegression()
     mlr_night_reg = LinearRegression()
@@ -292,18 +286,7 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     predict_night = mlr_night_reg.predict(X_test)
 
     # plot predict vs actual
-    xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
-    with plt.style.context('fivethirtyeight'):
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Multiple Linear Regression \n {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_mlr_{}.pdf'.format(predict_quant,city), format='pdf', dpi=1000, transparent=True)
-        # plt.show()
-        plt.clf()
+    plot_actualVpredict(y, predict_day, predict_night, 'mlr', city, predict_quant)
 
     # calculate the MAE
     mae_day = np.mean(abs(predict_day - y['day_test']))
@@ -311,21 +294,136 @@ def regression_linear(X_train, y, X_test, city, predict_quant):
     r2_day = r2_score(y['day_test'], predict_day)
     r2_night = r2_score(y['night_test'], predict_night)
 
-    if r2_night < -1e10:
-        import code
-        code.interact(local=locals())
-    # print('\n \nMultiple Linear Regression model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['mlr'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
-
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
 
     return(loss)
 
+
+def regression_randomforest(X_train, y, X_test, city, predict_quant):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'rf'
+    # train the model
+    reg_day = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_night = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day = np.mean(abs(predict_day - y['day_test']))
+    mae_night = np.mean(abs(predict_night - y['night_test']))
+    r2_day = r2_score(y['day_test'], predict_day)
+    r2_night = r2_score(y['night_test'], predict_night)
+
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+
+    return(loss)
+
+
+def regression_mars(X_train, y, X_test, city, predict_quant):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'mars'
+    # train the model
+    reg_day = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_night = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day = np.mean(abs(predict_day - y['day_test']))
+    mae_night = np.mean(abs(predict_night - y['night_test']))
+    r2_day = r2_score(y['day_test'], predict_day)
+    r2_night = r2_score(y['night_test'], predict_night)
+
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+
+    return(loss)
+
+
+def regression_gam(X_train, y, X_test, city, predict_quant):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'gam'
+    # train the model
+    reg_day = LinearGAM(n_splines=10)
+    reg_night = LinearGAM(n_splines=10)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day = np.mean(abs(predict_day - y['day_test']))
+    mae_night = np.mean(abs(predict_night - y['night_test']))
+    r2_day = r2_score(y['day_test'], predict_day)
+    r2_night = r2_score(y['night_test'], predict_night)
+
+    # record results
+    loss = pd.DataFrame({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    })
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night})
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night})
+
+    return(loss)
 
 def full_gbm_regression(df, cities, vars_selected=None):
     '''
@@ -367,6 +465,10 @@ def full_gbm_regression(df, cities, vars_selected=None):
     return(reg_gbm, X_train)
 
 
+###
+# Supporting code
+###
+
 def split_holdout(df, response, test_size):
     '''
     Prepare spatial holdout
@@ -396,7 +498,6 @@ def split_holdout(df, response, test_size):
     X_train = df[~df.holdout.isin(heldout_groups)]
     y_train = response[~df.holdout.isin(heldout_groups)]
     return(X_train, X_test, y_train, y_test)
-
 
 def loop_variable_selection(df, cities):
     from datetime import datetime
@@ -702,7 +803,6 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
         fig.clf()
 
-
 def scatter_lst(df, cities):
     '''
     scatter lst night vs day
@@ -739,6 +839,23 @@ def joyplot_lst(df, cities):
         plt.xlabel('Land Surface Temperature ($^o$C)')
     plt.savefig('fig/working/density/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
     plt.clf()
+
+def plot_actualVpredict(y, predict_day, predict_night, model, city, target):
+    '''
+    plot a scatter of predicted vs actual points
+    '''
+    xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
+    with plt.style.context('fivethirtyeight'):
+        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
+        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
+        plt.plot(xy_line,xy_line, 'k--')
+        plt.ylabel('Predicted')
+        plt.xlabel('Actual')
+        plt.legend(loc='lower right')
+        plt.title('Gradient Boosted Trees \n {}'.format(city))
+        plt.savefig('fig/working/regression/actualVpredict_{}_{}_{}.pdf'.format(target, model, city), format='pdf', dpi=1000, transparent=True)
+        plt.clf()
+
 
 if __name__ == '__main__':
     # profile() # initialise the board
