@@ -81,7 +81,7 @@ def import_data(grid_size):
     return(df)
 
 
-def regressions(df, cities, sim_num):
+def regressions(df, cities, sim_num, grid_size):
     '''
     to compare regression out-of-bag accuracy I need to split into test and train
     I also want to scale some of the variables
@@ -102,18 +102,20 @@ def regressions(df, cities, sim_num):
         X_train, X_test = subset_regression_data(X_train, X_test)
         # response values
         y = define_response_lst(y_train, y_test)
-        # apply the null model
+        # null model
         loss = regression_null(y, city, predict_quant, loss)
-        # now the GradientBoostingRegressor
+        # GradientBoostingRegressor
         loss = regression_gradientboost(X_train, y, X_test, city, predict_quant, loss)
-        # finally, multiple linear regression
+        # multiple linear regression
         loss = regression_linear(X_train, y, X_test, city, predict_quant, loss)
-        # join the loss functions
-        loss_city = pd.concat([loss_null, loss_mlr, loss_gbm])
-        # print(loss_city)
-        loss = loss.append(loss_city)
+        # random forest regression
+        loss = regression_randomforest(X_train, y, X_test, city, predict_quant, loss)
+        # mars
+        loss = regression_mars(X_train, y, X_test, city, predict_quant, loss)
+        # gam
+        loss = regression_gam(X_train, y, X_test, city, predict_quant, loss)
     # save results
-    loss.to_csv('data/regression/holdout_results.csv')
+    loss.to_csv('data/regression/holdout_results_{}.csv'.format(grid_size))
 
 
 def regression_cityholdouts(df, cities):
@@ -138,18 +140,20 @@ def regression_cityholdouts(df, cities):
         X_train, X_test = subset_regression_data(X_train, X_test)
         # response values
         y = define_response_lst(y_train, y_test)
-
+        ### do the holdouts
         city = 'hold-{}'.format(city)
-        # apply the null model
-        loss_null = regression_null(y, city, predict_quant)
-        # now the GradientBoostingRegressor
-        loss_gbm = regression_gradientboost(X_train, y, X_test, city, predict_quant)
-        # finally, multiple linear regression
-        loss_mlr = regression_linear(X_train, y, X_test, city, predict_quant)
-        # join the loss functions
-        loss_city = pd.concat([loss_null, loss_mlr, loss_gbm])
-        # print(loss_city)
-        loss = loss.append(loss_city)
+        # null model
+        loss = regression_null(y, city, predict_quant, loss)
+        # GradientBoostingRegressor
+        loss = regression_gradientboost(X_train, y, X_test, city, predict_quant, loss)
+        # multiple linear regression
+        loss = regression_linear(X_train, y, X_test, city, predict_quant, loss)
+        # random forest regression
+        loss = regression_randomforest(X_train, y, X_test, city, predict_quant, loss)
+        # mars
+        loss = regression_mars(X_train, y, X_test, city, predict_quant, loss)
+        # gam
+        loss = regression_gam(X_train, y, X_test, city, predict_quant, loss)
     return(loss)
 
 
@@ -229,7 +233,6 @@ def regression_null(y, city, predict_quant, loss):
 
     return(loss)
 
-
 def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
@@ -268,7 +271,6 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
     loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
-
 
 def regression_linear(X_train, y, X_test, city, predict_quant, loss):
     '''
@@ -309,7 +311,6 @@ def regression_linear(X_train, y, X_test, city, predict_quant, loss):
 
     return(loss)
 
-
 def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
@@ -348,7 +349,6 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
 
     return(loss)
 
-
 def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
@@ -386,7 +386,6 @@ def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
 
     return(loss)
-
 
 def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     '''
@@ -622,13 +621,13 @@ def plot_density(df, cities):
         plt.savefig('fig/working/density/lst-vs-tr_night.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-def plot_holdout_points(loss):
-    loss_plot = loss.unstack(level=0)
-    loss_plot = loss_plot.unstack(level=0)
-    loss_plot = pd.DataFrame(loss_plot).T
-    loss_plot = pd.melt(loss_plot)
-    loss_plot['city'] = loss_plot['city'].str[-3:]
-    # print(loss_plot)
+def plot_holdout_points(loss, grid_size):
+    '''
+    plot the city holdout validation metrics
+    '''
+
+    loss['city'] = loss_plot['city'].str[-3:]
+
     # with plt.style.context('fivethirtyeight'):
     five_thirty_eight = [
         "#30a2da",
@@ -639,17 +638,17 @@ def plot_holdout_points(loss):
     ]
     sns.set_palette(five_thirty_eight)
     mpl.rcParams.update({'font.size': 20})
-    g = sns.factorplot(orient="h", y="model", x="value", hue="city", linestyles='', markers=['$B$','$D$','$X$','$P$'],
-    col = "loss", row = "time", data=loss_plot, sharex = 'col', order=['null','mlr','gbm'], aspect=2, scale=2.5)
-    g.set_titles('{row_name}')
-    for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
-            if i==2:
-                ax.set_xlim(0,12)
-                ax.set_xlabel('Mean Absolute Error')
-            elif i==3:
-                ax.set_xlim(-1,1)
-                ax.set_xlabel('Out-of-bag R$^2$')
-    plt.savefig('fig/working/regression/cities_holdout.pdf', format='pdf', dpi=1000, transparent=True)
+    g = sns.factorplot(y="error_value", x="time_of_day", hue="city", linestyles='', markers=['$B$','$D$','$X$','$P$'],
+    col = "error_metric", data=loss)#, order=['null','mlr','gbm'], aspect=2, scale=2.5)
+    # g.set_titles('{row_name}')
+    # for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
+    #         if i==2:
+    #             ax.set_xlim(0,12)
+    #             ax.set_xlabel('Mean Absolute Error')
+    #         elif i==3:
+    #             ax.set_xlim(-1,1)
+    #             ax.set_xlabel('Out-of-bag R$^2$')
+    plt.savefig('fig/working/regression/cities_holdout_{}.pdf'.format(grid_size), format='pdf', dpi=1000, transparent=True)
     plt.show()
     plt.clf()
 
