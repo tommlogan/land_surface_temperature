@@ -6,20 +6,27 @@ Output is a csv with data for analysis
 # import libraries
 import pandas as pd
 import numpy as np
+import time
+import code
 
 def main():
 
     cities = ['bal','det','phx','por']
-    grid_size = 500
+    grid_size = 100
     # init all city dataframe
     df = pd.DataFrame()
+    add_index = 0
     for city in cities:
         # import city data
-        df_city = pd.read_csv('data/processed/grid/{}/2018-10-01/{}_data_{}.csv'.format(city,city,grid_size))
+        if grid_size == 100:
+            dir_date = '2018-10-20'
+        else:
+            dir_date = '2018-10-01'
+        df_city = pd.read_csv('data/processed/grid/{}/{}/{}_data_{}.csv'.format(city, dir_date, city,grid_size))
         # scale city specific variables
         df_city = scaling_city(df_city)
         # add the grid group numbers
-        df_city = holdout_grid(df_city)
+        df_city, add_index = holdout_grid(df_city, add_index)
         # append city name to df
         df_city['city'] = city
         # bind to complete df
@@ -27,7 +34,9 @@ def main():
     # apply transformation on entire dataset
     df = scaling_all(df)
     # write to csv
-    df.to_csv('data/data_regressions_{}.csv'.format(grid_size))
+    df = df.loc[:, df.isnull().mean() < .00001]
+    # code.interact(local = locals())
+    df.to_csv('data/data_regressions_{}_{}.csv'.format(grid_size, time.strftime("%Y%m%d")))
 
 
 def scaling_city(df_city):
@@ -42,12 +51,32 @@ def scaling_city(df_city):
     # outside city limits
     df_city = df_city[df_city['area'] > 0]
 
+    # drop any values where the landsurface temperature is inf or nan
+    df_city = df_city[np.isfinite(df_city['lst_day_mean'])]
+    df_city = df_city[np.isfinite(df_city['lst_night_mean'])]
+
+    ## for phoenix - remove large rural areas outside of lidar zone
+    if df_city.city.iloc[100] == 'phx':
+        df_city = df_city[np.isfinite(df_city['svf_mean'])]
+
+    # setting building NaN values to 0
+    df_city.bldg.fillna(0, inplace = True)
+
+    # setting NaN population regions to 0
+    df_city = df_city[np.isfinite(df_city['pdens_mean'])]
+
+    # drop a couple of columns
+    df_city = df_city.loc[:, df_city.isnull().mean() < .05]
+    # drop_vars = ['bldg_sl', 'tree_max_sl', 'dsm_max_sl', 'dsm_mean_sl', 'dsm_min_sl', 'dsm_sd_sl']
+    # df_city = df_city.drop(drop_vars, axis=1)
+
     ### NaN variables
     # remove night time lights (not enough variance to get standard deviation)
+    vars_all = df_city.columns.values
     vars_ntl = [x for x in vars_all if 'ntl' in x]
     df_city = df_city.drop(vars_ntl, axis=1)
-    # drop any nan rows and report how many dropped
-    df_city = df_city.dropna(axis=0, how='any')
+#     # drop any nan rows and report how many dropped
+    df_city = df_city.dropna(axis='index', how='any')
 
     ### Elevation ###
     # subtract the mean from all of the elevation variables (except standard deviation)
@@ -102,7 +131,7 @@ def scaling_all(df):
     for var_lcov in vars_lcov:
         df[var_lcov] = df[var_lcov]/area_max
     # drop rows with water more than 20% of area
-    df = df.loc[df['lcov_11'] < 0.2]
+    # df = df.loc[df['lcov_11'] < 0.2]
     # drop lcov variables
     vars_lcov = [i for i in df.columns.values if 'lcov' in i]
     # keep water (lcov_11)
@@ -117,9 +146,10 @@ def scaling_all(df):
     # set the building area as a percent of the cell's area
     df.bldg = df.bldg/df.area
 
+
     # drop area
     df = df.drop('area', axis=1)
-
+    # code.interact(local = locals())
     # Transform to [0,1]
     vars_all = df.columns.values
     vars_indep = [i for i in vars_all if 'lst' not in i and i not in ['x','y','holdout','city']]
@@ -127,13 +157,16 @@ def scaling_all(df):
         # calc max and min
         var_min = np.min(df[indep_var])
         var_max = np.max(df[indep_var])
+        var_mean = np.mean(df[indep_var])
+        var_sd = np.std(df[indep_var])
         # transform to [0,1]
-        df[indep_var] = (df[indep_var] - var_min) / (var_max - var_min)
+        # df[indep_var] = (df[indep_var] - var_min) / (var_max - var_min)
+        df[indep_var] = (df[indep_var] - var_mean) / (var_sd)
 
     return(df)
 
 
-def holdout_grid(df_city):
+def holdout_grid(df_city, add_index):
     '''
     assign each row a spatial cell group number.
     holdouts will be done at the cell group to avoid overfitting
@@ -152,7 +185,10 @@ def holdout_grid(df_city):
         r_iy = np.searchsorted(cutoffs_y,r.y)
         df_city.loc[index, 'holdout'] = r_iy * n_cells[0] + r_ix
 
-    return(df_city)
+    # I want the holdout values to be unique (intercity)
+    df_city.holdout += add_index
+    add_index = np.max(df_city.holdout)
+    return(df_city, add_index)
 
 if __name__ == '__main__':
     main()
