@@ -78,12 +78,14 @@ def main():
     # # # plot the partial dependence
     # plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
-def import_data(grid_size):
-    df = pd.read_csv('data/data_regressions_{}_20190324.csv'.format(grid_size))
-    df = df.drop('Unnamed: 0', axis=1)
+def import_data(grid_size, selected_vars = True):
+    if selected_vars:
+        df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
+        df = df.drop('Unnamed: 0', axis=1)
+    else:
+        df = pd.read_csv('data/data_regressions_{}_20190324.csv'.format(grid_size))
+        df = df.drop('Unnamed: 0', axis=1)
     return(df)
-
-
 
 
 def regressions(df, cities, sim_num, grid_size, do_par = False):
@@ -255,27 +257,27 @@ def calculate_partial_dependence(df, grid_size, boot_index = None):
                 pred = gbm.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'gbrt', 'dependent':h,'independent':var_interest,
-                                                          'x':x, 'mean':np.mean(pred)}, ignore_index=True)
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
                 # rf
                 pred = rf.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'rf', 'dependent':h,'independent':var_interest,
-                                                          'x':x, 'mean':np.mean(pred)}, ignore_index=True)
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
                 # mars
                 pred = mars.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'mars', 'dependent':h,'independent':var_interest,
-                                                          'x':x, 'mean':np.mean(pred)}, ignore_index=True)
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
                 # gam
                 pred = gam.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'gam', 'dependent':h,'independent':var_interest,
-                                                          'x':x, 'mean':np.mean(pred)}, ignore_index=True)
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
                 # mlr
                 pred = mlr.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
-                                                          'x':x, 'mean':np.mean(pred)}, ignore_index=True)
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
             # save results
             if boot_index:
                 results_partial.to_csv('data/regression/bootstrap_{}/results_partial_dependence_{}.csv'.format(grid_size,boot_index))
