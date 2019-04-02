@@ -12,7 +12,7 @@ import code
 def main():
 
     cities = ['bal','det','phx','por']
-    grid_size = 100
+    grid_size = 500
     # init all city dataframe
     df = pd.DataFrame()
     add_index = 0
@@ -32,7 +32,7 @@ def main():
         # bind to complete df
         df = df.append(df_city, ignore_index=True)
     # apply transformation on entire dataset
-    df = scaling_all(df)
+    df = scaling_all(df, grid_size)
     # write to csv
     df = df.loc[:, df.isnull().mean() < .00001]
     # code.interact(local = locals())
@@ -115,7 +115,7 @@ def scaling_city(df_city):
     return(df_city)
 
 
-def scaling_all(df):
+def scaling_all(df, grid_size):
     '''
     scale the variables between the cities
     '''
@@ -151,6 +151,7 @@ def scaling_all(df):
     df = df.drop('area', axis=1)
     # code.interact(local = locals())
     # Transform to [0,1]
+    normalize_parameters = pd.DataFrame()
     vars_all = df.columns.values
     vars_indep = [i for i in vars_all if 'lst' not in i and i not in ['x','y','holdout','city']]
     for indep_var in vars_indep:
@@ -159,10 +160,11 @@ def scaling_all(df):
         var_max = np.max(df[indep_var])
         var_mean = np.mean(df[indep_var])
         var_sd = np.std(df[indep_var])
+        normalize_parameters = normalize_parameters.append({'feature': indep_var,'mean': var_mean,'sd': var_sd,'max': var_max, 'min': var_min}, ignore_index=True)
         # transform to [0,1]
         # df[indep_var] = (df[indep_var] - var_min) / (var_max - var_min)
         df[indep_var] = (df[indep_var] - var_mean) / (var_sd)
-
+    normalize_parameters.to_csv('data/normalization_parameters_{}.csv'.format(grid_size))
     return(df)
 
 
