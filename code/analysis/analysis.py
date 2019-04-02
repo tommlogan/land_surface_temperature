@@ -214,14 +214,14 @@ def calculate_partial_dependence(df, grid_size):
     fit the models to the entire dataset
     loop through each feature
     vary the feature over its range
-    calculate the maximum change of the target variable
+    predict the target variable to see how it is influenced by the feature
     '''
     results_partial = pd.DataFrame()
-    df, response = prepare_lst_prediction(df)
-    df,  = subset_regression_data(df, df)
+    df, target = prepare_lst_prediction(df)
+    df  = subset_regression_data(df, df)[0]
     df_reference = df.copy()
     # loop day and night
-    for target in ['lst_day_mean', 'lst_night_mean']:
+    for h in ['lst_day_mean', 'lst_night_mean']:
         print(h)
         ###
         # fit models
@@ -238,8 +238,8 @@ def calculate_partial_dependence(df, grid_size):
         # GAM
         gam = LinearGAM(n_splines=10).fit(df, target[h])
         # linear
-        ols = LinearRegression()
-        ols = ols.fit(df, target[h])
+        mlr = LinearRegression()
+        mlr = mlr.fit(df, target[h])
         ###
         # loop through features and their ranges
         ###
@@ -255,27 +255,58 @@ def calculate_partial_dependence(df, grid_size):
                 results_partial = results_partial.append({'model': 'gbrt', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
                 # rf
-                pred = rf.predict(df_change[vars_ex])
+                pred = rf.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'rf', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
                 # mars
-                pred = mars.predict(df_change[vars_ex])
+                pred = mars.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'mars', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
                 # gam
-                pred = gam.predict(df_change[vars_ex])
+                pred = gam.predict(df_change)
                 # save results
                 results_partial = results_partial.append({'model': 'gam', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
                 # mlr
-                pred = ols.predict(df_change[vars_ex])
+                pred = mlr.predict(df_change)
                 # save results
-                results_partial = results_partial.append({'model': 'ols', 'dependent':h,'independent':var_interest,
+                results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
             # save results
             results_partial.to_csv('data/regression/results_partial_dependence_{}.csv'.format(grid_size))
+
+def calc_swing(results_pd, grid_size):
+    '''
+    calculate the variable importance (swing)
+    input: the results of the partial dependence
+    now calculate the maximum change of the target for each feature
+    the result is the swing, a measure of variable importance
+    '''
+    features = np.unique(results_pd['independent'])
+    targets = np.unique(results_pd['dependent'])
+    models = np.unique(results_pd['model'])
+    # init df
+    results_swing = pd.DataFrame()
+    # loop targets
+    for h in targets:
+        # loop models
+        for m in models:
+            # calculate the range of the target for each feature
+            model_range = results_pd.loc[(results_pd['dependent']==h) & (results_pd['model']==m)].groupby(['independent']).agg(np.ptp)
+            # calc sum of range
+            range_sum = model_range['mean'].sum()
+            # calc swing
+            swing = model_range['mean']/range_sum
+            # put into dataframe
+            swing = swing.to_frame('swing').reset_index()
+            swing['model'] = m
+            swing['dependent'] = h
+            # save
+            results_swing = results_swing.append(swing, ignore_index=True)
+        # save results
+        results_swing.to_csv('data/regression/results_swing_{}.csv'.format(grid_size))
 
 ###
 # Regression code
@@ -739,11 +770,10 @@ def plot_holdout_points(loss, grid_size):
     plt.show()
     plt.clf()
 
-def plot_holdouts(sim_num, loss):
+def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
-
     five_thirty_eight = [
         "#30a2da",
         "#fc4f30",
@@ -753,81 +783,40 @@ def plot_holdouts(sim_num, loss):
     ]
     sns.set_palette(five_thirty_eight)
     mpl.rcParams.update({'font.size': 12})
-    g = sns.boxplot(y="error", x="time_of_day", hue="model", col = "error_metric", data=loss, sharey = False,
-                      linestyles='', markers=['$B$','$D$','$X$','$P$'],
-                      hue_order = ['bal', 'det', 'phx', 'por'],
-                      ci=None)
-    g.set_titles('{row_name}')
+    g = sns.catplot(y="error", x="time_of_day", hue="model", col = "error_metric", data=loss, sharey = False, kind="box")
+    g.set_titles('')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
         if i%2==1:
-            ax.set_ylim(0,5)
-            ax.set_ylabel('Mean Absolute Error')
+            ax.set_ylim(0,1.3)
+            ax.set_ylabel('Mean Absolute Error ($^o$C)')
             ax.set_xlabel('')
         elif i%2==0:
-            ax.set_ylim(-1,1)
+            ax.set_ylim(0.5,1)
             ax.set_ylabel('Out-of-bag R$^2$')
             ax.set_xlabel('')
-    plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
+    plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
     plt.show()
     plt.clf()
 
-def plot_importance(reg_gbm, cities, show_plot=False):
+def plot_importance(results_swing, grid_size):
     '''
     plot the feature importance of the variables and the cities
     '''
-    cities =  cities.copy()
-    cities.append('all')
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 20})
-    # get the covariates - these will be the indices in the dataframe
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'], cities],
-                                    names=['time','city'])
-    var_imp = pd.DataFrame(columns = header, index = list(reg_gbm['covariates']))
-    # loop the cities to add the var imp to the df
-    for city in cities:
-        for time in ['diurnal','nocturnal']:
-            var_imp.loc[:,(time, city)] = reg_gbm[time][city].feature_importances_
-    var_imp.loc[:,('nocturnal','mean')] = np.mean(var_imp.loc[:,'nocturnal'].drop('all',axis=1),axis=1)
-    var_imp = var_imp.sort_values(by=('nocturnal','mean'),ascending=False)
-    # make the nocturnal values negative
-    nocturnal = var_imp.loc[:,'nocturnal'].copy()
-    nocturnal = nocturnal.drop('mean',axis=1)
-    nocturnal['covariate'] = nocturnal.index
-    nocturnal = pd.melt(nocturnal,id_vars=['covariate'])
-    nocturnal.loc[:,'value'] = nocturnal['value'] * -1
-    # diurnal
-    diurnal = var_imp.loc[:,'diurnal'].copy()
-    diurnal.loc[:,'covariate'] = diurnal.index
-    diurnal = pd.melt(diurnal,id_vars=['covariate'])
+    # order features by nocturnal swing
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
     # plot
-    fig, ax = plt.subplots()
-    fig.set_size_inches(15, 9)
-    ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=nocturnal, palette = five_thirty_eight)
-    ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=diurnal, palette = five_thirty_eight)
-    plt.xlabel('Variable Importance')
-    plt.ylabel('Variables')
-    # legend
-    handles, labels = ax.get_legend_handles_labels()
-    l = plt.legend(handles[0:len(cities)], labels[0:len(cities)], loc='lower right')
-    # zero line
-    [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
-    plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
-    plt.xlim(-0.4,0.4)
-    plt.tight_layout()
-    # save the figure
-    if show_plot:
-        plt.show()
-    else:
-        plt.savefig('fig/working/variable_importance_selected.pdf', format='pdf', dpi=1000, transparent=True)
-        plt.clf()
-    importance_order = var_imp.index.values
-    return(importance_order)
+    g = sns.factorplot(x='swing', y='independent', hue='dependent', data=results_swing, kind='bar', col='model', order = feature_order)
+    g.set_axis_labels("variable importance (swing)", "")
+    g.set_titles("{col_name}")
+
+    # fig = plt.gcf()
+    # fig.set_size_inches(15,20)
+
+    plt.savefig('fig/working/regression/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+    plt.show()
+    plt.clf()
+    return(feature_order)
 
 def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
     '''
