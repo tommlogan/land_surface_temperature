@@ -18,6 +18,7 @@ import pickle
 import code
 from joblib import Parallel, delayed
 pd.options.mode.chained_assignment = 'raise'
+import itertools
 
 # regression libraries
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -209,7 +210,7 @@ def define_response_lst(y_train, y_test):
     return(y)
 
 
-def calculate_partial_dependence(df, grid_size):
+def calculate_partial_dependence(df, grid_size, boot_index = None):
     '''
     fit the models to the entire dataset
     loop through each feature
@@ -220,6 +221,7 @@ def calculate_partial_dependence(df, grid_size):
     df, target = prepare_lst_prediction(df)
     df  = subset_regression_data(df, df)[0]
     df_reference = df.copy()
+    feature_resolution = 25
     # loop day and night
     for h in ['lst_day_mean', 'lst_night_mean']:
         print(h)
@@ -245,7 +247,7 @@ def calculate_partial_dependence(df, grid_size):
         ###
         for var_interest in ['alb_mean','bldg','tree_mean']:#list(df): #['tree_mean','density_housesarea']:
             # loop through range of var_interest
-            var_values = np.linspace(np.percentile(df[var_interest],1),np.percentile(df[var_interest],99),25)
+            var_values = np.linspace(np.percentile(df[var_interest],1),np.percentile(df[var_interest],99), feature_resolution)
             df_change = df.copy()
             for x in var_values:
                 df_change[var_interest] = x
@@ -275,7 +277,10 @@ def calculate_partial_dependence(df, grid_size):
                 results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
                                                           'x':x, 'mean':np.mean(pred)}, ignore_index=True)
             # save results
-            results_partial.to_csv('data/regression/results_partial_dependence_{}.csv'.format(grid_size))
+            if boot_index:
+                results_partial.to_csv('data/regression/bootstrap_{}/results_partial_dependence_{}.csv'.format(grid_size,boot_index))
+            else:
+                results_partial.to_csv('data/regression/results_partial_dependence_{}.csv'.format(grid_size))
 
 def calc_swing(results_pd, grid_size):
     '''
@@ -307,6 +312,32 @@ def calc_swing(results_pd, grid_size):
             results_swing = results_swing.append(swing, ignore_index=True)
         # save results
         results_swing.to_csv('data/regression/results_swing_{}.csv'.format(grid_size))
+
+def bootstrap_main(df, grid_size, boot_num, do_par = False):
+    '''
+    loop the bootstraps to calculate the partial_dependence
+    '''
+    if do_par:
+        CORES_NUM = min(50,int(os.cpu_count())-4)
+        Parallel(n_jobs=CORES_NUM)(delayed(boot_pd)(df, grid_size, boot_index) for boot_index in range(boot_num))
+    else:
+        for boot_index in range(boot_num):
+            boot_pd(df, grid_size, boot_index)
+
+def boot_pd(df, grid_size, boot_index):
+    '''
+    sample the holdout numbers with replacement to create bootstrapped df
+    fit the models and calculate the partial dependence
+    '''
+    # resample the holdout numbers
+    holdout_numbers = np.unique(df.holdout)
+    holdout_sample = np.random.choice(holdout_numbers, len(holdout_numbers), replace=True)
+    # create the df based on this sample
+    sample_index = [list(df[df.holdout == x].index) for x in holdout_sample]
+    sample_index = list(itertools.chain.from_iterable(sample_index))
+    df = df.loc[sample_index]
+    # calculate the pd
+    calculate_partial_dependence(df, grid_size, boot_index)
 
 ###
 # Regression code
