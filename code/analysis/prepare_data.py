@@ -8,11 +8,11 @@ import pandas as pd
 import numpy as np
 import time
 import code
-
-def main():
+scale = False
+def main(scale=True):
 
     cities = ['bal','det','phx','por']
-    grid_size = 500
+    grid_size = 100
     # init all city dataframe
     df = pd.DataFrame()
     add_index = 0
@@ -24,7 +24,7 @@ def main():
             dir_date = '2018-10-01'
         df_city = pd.read_csv('data/processed/grid/{}/{}/{}_data_{}.csv'.format(city, dir_date, city,grid_size))
         # scale city specific variables
-        df_city = scaling_city(df_city)
+        df_city = scaling_city(df_city, scale)
         # add the grid group numbers
         df_city, add_index = holdout_grid(df_city, add_index)
         # append city name to df
@@ -32,14 +32,19 @@ def main():
         # bind to complete df
         df = df.append(df_city, ignore_index=True)
     # apply transformation on entire dataset
-    df = scaling_all(df, grid_size)
+    df = adjust_variables(df, scale)
+    if scale:
+        df = scaling_all(df, grid_size)
     # write to csv
     df = df.loc[:, df.isnull().mean() < .00001]
     # code.interact(local = locals())
-    df.to_csv('data/data_regressions_{}_{}.csv'.format(grid_size, time.strftime("%Y%m%d")))
+    if scale:
+        df.to_csv('data/data_regressions_{}_{}.csv'.format(grid_size, time.strftime("%Y%m%d")))
+    else:
+        df.to_csv('data/data_regressions_{}_{}_unnormalized.csv'.format(grid_size, time.strftime("%Y%m%d")))
 
 
-def scaling_city(df_city):
+def scaling_city(df_city, scale):
     '''
     scale the variables which are city specific (e.g. elevation has the city mean removed before [0,1] scaling)
     '''
@@ -109,16 +114,14 @@ def scaling_city(df_city):
     # drop vars
     df_city = df_city.drop(vars_lst_drop, axis=1)
     # calculate the mean of each
-    lst_means = df_city[vars_response].mean(axis=0)
-    df_city[vars_response] = df_city[vars_response] - lst_means
+    if scale:
+        lst_means = df_city[vars_response].mean(axis=0)
+        df_city[vars_response] = df_city[vars_response] - lst_means
 
     return(df_city)
 
 
-def scaling_all(df, grid_size):
-    '''
-    scale the variables between the cities
-    '''
+def adjust_variables(df, scale):
     vars_all = df.columns.values
     ### Land cover ###
     vars_lcov = [i for i in vars_all if 'lcov' in i]
@@ -129,7 +132,7 @@ def scaling_all(df, grid_size):
     # divide these values by the area value
     df = df[df['area'] > 0]
     for var_lcov in vars_lcov:
-        df[var_lcov] = df[var_lcov]/area_max
+        df[var_lcov] = df[var_lcov]/area_max*100
     # drop rows with water more than 20% of area
     # df = df.loc[df['lcov_11'] < 0.2]
     # drop lcov variables
@@ -139,16 +142,23 @@ def scaling_all(df, grid_size):
     df = df.drop(vars_lcov, axis=1)
 
     ### Drop impervious surface
-    vars_imp = [i for i in vars_all if 'imp' in i]
-    df = df.drop(vars_imp, axis=1)
+    if scale:
+        vars_imp = [i for i in vars_all if 'imp' in i]
+        df = df.drop(vars_imp, axis=1)
 
     ### Building area
     # set the building area as a percent of the cell's area
-    df.bldg = df.bldg/df.area
+    df.bldg = df.bldg/df.area*100
 
 
     # drop area
     df = df.drop('area', axis=1)
+    return(df)
+
+def scaling_all(df, grid_size):
+    '''
+    scale the variables between the cities
+    '''
     # code.interact(local = locals())
     # Transform to [0,1]
     normalize_parameters = pd.DataFrame()
@@ -193,4 +203,4 @@ def holdout_grid(df_city, add_index):
     return(df_city, add_index)
 
 if __name__ == '__main__':
-    main()
+    main(scale)
