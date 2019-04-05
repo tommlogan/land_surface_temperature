@@ -5,12 +5,13 @@ thermal radiance from LandSat images of cities
 
 # import libraries
 import matplotlib as mpl
-mpl.use('Agg')
+# mpl.use('Agg')
 import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import brewer2mpl
+import joypy
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
@@ -19,6 +20,8 @@ import code
 from joblib import Parallel, delayed
 pd.options.mode.chained_assignment = 'raise'
 import itertools
+import glob
+from math import *
 
 # regression libraries
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -34,8 +37,18 @@ import sys
 # from logger_config import *
 # logger = logging.getLogger(__name__)
 
-
 RANDOM_SEED = 3201
+
+# other constants
+city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'}
+model_names = {'rf':'random forest','mlr':'multivariate linear','gam':'generalized additive (gam)',
+                'gbrt':'gradient boosted trees','mars':'multivariate adaptive spline (mars)'}
+feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
+                'svf_mean':'sky view factor','dsm_mean':'digital surface model',
+                'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
+                'tree_max':'max % tree can.','bldg':'% building area','pdens_mean':'pop. density',
+                'tree_min':'min % tree can.','svf_max':'max sky view factor'
+                }
 
 def main():
     '''
@@ -83,7 +96,7 @@ def import_data(grid_size, selected_vars = True):
         df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     else:
-        df = pd.read_csv('data/data_regressions_{}_20190324.csv'.format(grid_size))
+        df = pd.read_csv('data/data_regressions_{}_20190405.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     return(df)
 
@@ -132,7 +145,7 @@ def single_regression(df_city, response, grid_size, predict_quant, i):
     # gam
     loss = regression_gam(X_train, y, X_test, city, predict_quant, loss)
     # save results
-    loss.to_csv('data/regression/holdout/holdout{}_results_{}.csv'.format(i, grid_size))
+    loss.to_csv('data/regression/holdout_{}/holdout{}_results_{}.csv'.format(grid_size, i, grid_size))
 
 
 def regression_cityholdouts(df, cities):
@@ -247,9 +260,9 @@ def calculate_partial_dependence(df, grid_size, boot_index = None):
         ###
         # loop through features and their ranges
         ###
-        for var_interest in ['alb_mean','bldg','tree_mean']:#list(df): #['tree_mean','density_housesarea']:
+        for var_interest in list(df): #['tree_mean','density_housesarea']:
             # loop through range of var_interest
-            var_values = np.linspace(np.percentile(df[var_interest],1),np.percentile(df[var_interest],99), feature_resolution)
+            var_values = np.linspace(np.percentile(df[var_interest],2.5),np.percentile(df[var_interest],97.5), feature_resolution)
             df_change = df.copy()
             for x in var_values:
                 df_change[var_interest] = x
@@ -284,6 +297,7 @@ def calculate_partial_dependence(df, grid_size, boot_index = None):
             else:
                 results_partial.to_csv('data/regression/results_partial_dependence_{}.csv'.format(grid_size))
 
+
 def calc_swing(results_pd, grid_size):
     '''
     calculate the variable importance (swing)
@@ -315,6 +329,7 @@ def calc_swing(results_pd, grid_size):
         # save results
         results_swing.to_csv('data/regression/results_swing_{}.csv'.format(grid_size))
 
+
 def bootstrap_main(df, grid_size, boot_num, do_par = False):
     '''
     loop the bootstraps to calculate the partial_dependence
@@ -325,6 +340,21 @@ def bootstrap_main(df, grid_size, boot_num, do_par = False):
     else:
         for boot_index in range(boot_num):
             boot_pd(df, grid_size, boot_index)
+    # import the data
+    path = 'data/regression/bootstrap_{}'.format(grid_size)
+    all_files = glob.glob(os.path.join(path, "*.csv"))
+    df_from_each_file = (pd.read_csv(f) for f in all_files)
+    results_pd = pd.concat(df_from_each_file, ignore_index=True)
+    # undo the normalization
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+    for index, row in results_pd.iterrows():
+        feature = row.independent
+        results_pd.loc[index,'x'] = row['x']*normalize_parameters.loc[feature,'sd'] + normalize_parameters.loc[feature,'mean']
+
+    # save results
+    results_pd.to_csv('data/regression/results_partial_dependents_{}.csv'.format(grid_size))
+
 
 def boot_pd(df, grid_size, boot_index):
     '''
@@ -715,6 +745,36 @@ def feature_selection(holdout_num, city, df, period):
 ###
 # Plotting code
 ###
+# plt.style.use(['seaborn-colorblind'])#,'dark_background'])
+plt.style.use(['tableau-colorblind10'])#,'dark_background'])
+fig_transparency = False
+# figure size (cm)
+width_1col = 8.7/2.54
+width_2col = 17.8/2.54
+golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
+height_1c = width_1col/golden_mean
+height_2c = width_2col/golden_mean
+# font size
+font_size = 11
+dpi = 500
+# additional parameters
+params = {'axes.labelsize': font_size, # fontsize for x and y labels (was 10)
+          'font.size': font_size, # was 10
+          'legend.fontsize': font_size * 2/3, # was 10
+          'xtick.labelsize': font_size,
+          'font.sans-serif' : 'Corbel',
+          # 'ytick.labelsize': 0,
+          'lines.linewidth' : 1,
+          'figure.autolayout' : True,
+          'figure.figsize': [width_2col, height_2c],#[fig_width/2.54,fig_height/2.54]
+          'axes.spines.top'    : False,
+          'axes.spines.right'  : False,
+          'axes.xmargin' : 0
+}
+mpl.rcParams.update(params)
+
+
+
 def plot_density(df, cities):
     '''
     output density plots of the variables
@@ -773,16 +833,6 @@ def plot_holdout_points(loss, grid_size):
     plot the city holdout validation metrics
     '''
     loss['city'] = loss['hold_num'].str[-3:]
-    # with plt.style.context('fivethirtyeight'):
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",
-    ]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 12})
     g = sns.factorplot(y="error", x="time_of_day", hue="city", col = "error_metric", data=loss, sharey = False,
                        row = 'model',
                       linestyles='', markers=['$B$','$D$','$X$','$P$'],
@@ -793,11 +843,11 @@ def plot_holdout_points(loss, grid_size):
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
         if i%2==1:
             ax.set_ylim(0,5)
-            ax.set_ylabel('Mean Absolute Error')
+            ax.set_ylabel('mean absolute error')
             ax.set_xlabel('')
         elif i%2==0:
             ax.set_ylim(-1,1)
-            ax.set_ylabel('Out-of-bag R$^2$')
+            ax.set_ylabel('out-of-bag R$^2$')
             ax.set_xlabel('')
     plt.savefig('fig/working/regression/cities_holdout_{}.pdf'.format(grid_size), format='pdf', dpi=1000, transparent=True)
     plt.show()
@@ -807,26 +857,18 @@ def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",
-    ]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 12})
     g = sns.catplot(y="error", x="time_of_day", hue="model", col = "error_metric", data=loss, sharey = False, kind="box")
     g.set_titles('')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
         if i%2==1:
-            ax.set_ylim(0,1.3)
-            ax.set_ylabel('Mean Absolute Error ($^o$C)')
+            ax.set_ylim(0,5)
+            ax.set_ylabel('mean absolute error ($^o$C)')
             ax.set_xlabel('')
         elif i%2==0:
             ax.set_ylim(0.5,1)
-            ax.set_ylabel('Out-of-bag R$^2$')
+            ax.set_ylabel('out-of-bag R$^2$')
             ax.set_xlabel('')
+            # plt.gca().invert_yaxis()
     plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
     plt.show()
     plt.clf()
@@ -836,12 +878,19 @@ def plot_importance(results_swing, grid_size):
     plot the feature importance of the variables and the cities
     '''
     # order features by nocturnal swing
+    results_swing = results_swing.replace(feature_names)
     feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
 
+    results_swing = results_swing.replace(model_names)
+
     # plot
-    g = sns.factorplot(x='swing', y='independent', hue='dependent', data=results_swing, kind='bar', col='model', order = feature_order)
+    g = sns.factorplot(x='swing', y='independent', hue='dependent',
+                        data=results_swing, kind='bar', col='model',
+                        order = feature_order, hue_order=['lst_night_mean','lst_day_mean'])
     g.set_axis_labels("variable importance (swing)", "")
     g.set_titles("{col_name}")
+    new_labels = ['nocturnal','diurnal']
+    for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
 
     # fig = plt.gcf()
     # fig.set_size_inches(15,20)
@@ -858,14 +907,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
     cities =  cities.copy()
     cities.append('all')
     # plot setup (surely this can be a function)
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 20})
+
     # init subplots (left is nocturnal, right is diurnal)
     fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey=True)#'row')
     # loop through the top n variables by nocturnal importance
@@ -906,37 +948,37 @@ def scatter_lst(df, cities):
     '''
     scatter lst night vs day
     '''
-
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
     # scatter plot thermal radiance against land surface, colored by city
     # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
-    with plt.style.context('fivethirtyeight'):
-        for i in range(len(cities)):
-            city = cities[i]
-            df_city = df.loc[df['city']==city]
-            plt.scatter(df_city['lst_day_mean_mean'], df_city['lst_night_mean_mean'], label = city, alpha = 0.5)
-        plt.legend(loc='lower right')
-        plt.xlabel('Day LST ($^o$C)')
-        plt.ylabel('Night LST ($^o$C)')
-        plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean_mean'].corr(df_city['lst_night_mean_mean'])), ha='left', va='top')
-        plt.savefig('fig/working/density/lst_night-vs-day.pdf', format='pdf', dpi=300, transparent=True)
-        plt.clf()
+    # with plt.style.context('fivethirtyeight'):
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['lst_day_mean'], df_city['lst_night_mean'], label = city, alpha = 0.5)
+    plt.legend(loc='lower right')
+    plt.xlabel('Day LST ($^o$C)')
+    plt.ylabel('Night LST ($^o$C)')
+    plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
+    plt.savefig('fig/report/lst_night-vs-day.pdf', format='pdf', dpi=300, transparent=True)
+    plt.show()
+    plt.clf()
 
-def joyplot_lst(df, cities):
+def joyplot_lst(df):
     '''
-    scatter lst night vs day
+    joy (ridge) plot of lst night vs day
     '''
-
-    # scatter plot thermal radiance against land surface, colored by city
-    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
-    import joypy
-    df1 = df[['lst_night_mean_mean','lst_day_mean_mean','city']]
-    df1 = df1.rename(index=str, columns={"lst_night_mean_mean": "night", "lst_day_mean_mean": "day"})
+    df1 = df[['lst_night_mean','lst_day_mean','city']]
+    df1 = df1.replace(city_names)
+    df1 = df1.rename(index=str, columns={"lst_night_mean": "nocturnal", "lst_day_mean": "diurnal"})
     df1 = df1.replace([np.inf, -np.inf], np.nan)
     df1 = df1.dropna(axis=0, how='any')
-    with plt.style.context('fivethirtyeight'):
-        fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
-        plt.xlabel('Land Surface Temperature ($^o$C)')
-    plt.savefig('fig/working/density/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
+    # with plt.style.context('fivethirtyeight'):
+    fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
+    plt.xlabel('Land Surface Temperature ($^{o}$C)')
+    plt.savefig('fig/report/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
+    plt.show()
     plt.clf()
 
 def plot_actualVpredict(y, predict_day, predict_night, model, city, target):
@@ -944,16 +986,16 @@ def plot_actualVpredict(y, predict_day, predict_night, model, city, target):
     plot a scatter of predicted vs actual points
     '''
     xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
-    with plt.style.context('fivethirtyeight'):
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Gradient Boosted Trees \n {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_{}_{}.pdf'.format(target, model, city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    # with plt.style.context('fivethirtyeight'):
+    plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
+    plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
+    plt.plot(xy_line,xy_line, 'k--')
+    plt.ylabel('Predicted')
+    plt.xlabel('Actual')
+    plt.legend(loc='lower right')
+    plt.title('Gradient Boosted Trees \n {}'.format(city))
+    plt.savefig('fig/working/regression/actualVpredict_{}_{}_{}.pdf'.format(target, model, city), format='pdf', dpi=1000, transparent=True)
+    plt.clf()
 
 
 if __name__ == '__main__':
