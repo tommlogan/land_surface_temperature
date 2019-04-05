@@ -155,6 +155,7 @@ def adjust_variables(df, scale):
     df = df.drop('area', axis=1)
     return(df)
 
+
 def scaling_all(df, grid_size):
     '''
     scale the variables between the cities
