@@ -997,6 +997,44 @@ def plot_actualVpredict(y, predict_day, predict_night, model, city, target):
     plt.savefig('fig/working/regression/actualVpredict_{}_{}_{}.pdf'.format(target, model, city), format='pdf', dpi=1000, transparent=True)
     plt.clf()
 
+def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
+    '''
+    Plot the 2d partial dependence
+    '''
+    # two way partial dependence
+    figs, axes = plt.subplots(2, 2, figsize = (11,8), sharey=False, sharex=False)
+    # loop through the top n variables by nocturnal importance
+    df_vars = list(df_x)
+    features = [(1,4),(1,5),(0,4),(0,5)]
+    # import data to unnormalize
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+
+    for i in range(len(features)):
+        plot_row = floor(i/2)
+        left_right = np.mod(i,2)
+        # calculate the partial dependence
+        pdp, ax = partial_dependence(regressor, features[i], X = df_x,
+                            grid_resolution = 50)
+        # get data
+        XX, YY = np.meshgrid(ax[0], ax[1])
+        Z = pdp[0].reshape(list(map(np.size, ax))).T
+        # unnormalize
+        feature_x = df_vars[features[i][0]]
+        feature_y = df_vars[features[i][1]]
+        XX = XX*normalize_parameters.loc[feature_x,'sd'] + normalize_parameters.loc[feature_x,'mean']
+        YY = YY*normalize_parameters.loc[feature_y,'sd'] + normalize_parameters.loc[feature_y,'mean']
+
+        # add the line to the plot
+        CS = axes[plot_row, left_right].contour(XX,YY,Z)#, levels=np.arange(-8,4,1))
+        axes[plot_row, left_right].clabel(CS, inline=True, fontsize=12)
+        # title and axis labels
+        axes[plot_row, left_right].set_xlabel(feature_names[feature_x])
+        axes[plot_row, left_right].set_ylabel(feature_names[feature_y])
+    # save
+    plt.savefig('fig/report/pdp_2d_{}_{}.pdf'.format(time_of_day,grid_size), format='pdf', dpi=500, transparent=True)
+    plt.show()
+    plt.clf()
 
 if __name__ == '__main__':
     # profile() # initialise the board
