@@ -944,7 +944,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
         fig.clf()
 
-def scatter_lst(df, cities):
+def scatter_lst(df, cities, grid_size):
     '''
     scatter lst night vs day
     '''
@@ -961,11 +961,11 @@ def scatter_lst(df, cities):
     plt.xlabel('Day LST ($^o$C)')
     plt.ylabel('Night LST ($^o$C)')
     plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
-    plt.savefig('fig/report/lst_night-vs-day.pdf', format='pdf', dpi=300, transparent=True)
+    plt.savefig('fig/report/lst_night-vs-day_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
     plt.clf()
 
-def joyplot_lst(df):
+def joyplot_lst(df, grid_size):
     '''
     joy (ridge) plot of lst night vs day
     '''
@@ -977,7 +977,7 @@ def joyplot_lst(df):
     # with plt.style.context('fivethirtyeight'):
     fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
     plt.xlabel('Land Surface Temperature ($^{o}$C)')
-    plt.savefig('fig/report/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
+    plt.savefig('fig/report/joyplot_lst_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
     plt.clf()
 
