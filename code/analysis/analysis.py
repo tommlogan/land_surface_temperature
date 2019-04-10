@@ -961,9 +961,9 @@ def scatter_lst(df, cities, grid_size):
         df_city = df.loc[df['city']==city]
         plt.scatter(df_city['lst_day_mean'], df_city['lst_night_mean'], label = city, alpha = 0.5)
     plt.legend(loc='lower right')
-    plt.xlabel('Day LST ($^o$C)')
-    plt.ylabel('Night LST ($^o$C)')
-    plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
+    plt.xlabel('diurnal LST ($^o$C)')
+    plt.ylabel('nocturnal LST ($^o$C)')
+    plt.text(20, 40,'correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
     plt.savefig('fig/report/lst_night-vs-day_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
     plt.clf()
@@ -979,7 +979,7 @@ def joyplot_lst(df, grid_size):
     df1 = df1.dropna(axis=0, how='any')
     # with plt.style.context('fivethirtyeight'):
     fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
-    plt.xlabel('Land Surface Temperature ($^{o}$C)')
+    plt.xlabel('land surface temperature ($^{o}$C)')
     plt.savefig('fig/report/joyplot_lst_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
     plt.clf()
