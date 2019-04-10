@@ -47,8 +47,13 @@ feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'
                 'svf_mean':'sky view factor','dsm_mean':'digital surface model',
                 'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
                 'tree_max':'max % tree can.','bldg':'% building area','pdens_mean':'pop. density',
-                'tree_min':'min % tree can.','svf_max':'max sky view factor'
+                'tree_min':'min % tree can.','svf_max':'max sky view factor',
+                'tree_sd': '% tree can. stand. dev.', 'nbdi_sd_sl':'nbdi surrounding stand. dev.',
+                'tree_sd_sl':'% tree can. surrounding stand. dev.',
+                'ndvi_sd': 'ndvi stand. dev'
                 }
+
+CORES_NUM = min(50,int(os.cpu_count()*3/4))
 
 def main():
     '''
@@ -112,7 +117,6 @@ def regressions(df, cities, sim_num, grid_size, do_par = False):
     df_city, response = prepare_lst_prediction(df_city)
     # conduct the holdout
     if do_par:
-        CORES_NUM = min(50,int(os.cpu_count()))
         Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(sim_num))
     else:
         for i in range(sim_num):
@@ -335,7 +339,6 @@ def bootstrap_main(df, grid_size, boot_num, do_par = False):
     loop the bootstraps to calculate the partial_dependence
     '''
     if do_par:
-        CORES_NUM = min(50,int(os.cpu_count())-4)
         Parallel(n_jobs=CORES_NUM)(delayed(boot_pd)(df, grid_size, boot_index) for boot_index in range(boot_num))
     else:
         for boot_index in range(boot_num):
@@ -895,7 +898,7 @@ def plot_importance(results_swing, grid_size):
     # fig = plt.gcf()
     # fig.set_size_inches(15,20)
 
-    plt.savefig('fig/working/regression/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+    plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
     plt.show()
     plt.clf()
     return(feature_order)
@@ -1005,7 +1008,11 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
     figs, axes = plt.subplots(2, 2, figsize = (11,8), sharey=False, sharex=False)
     # loop through the top n variables by nocturnal importance
     df_vars = list(df_x)
-    features = [(1,4),(1,5),(0,4),(0,5)]
+    if grid_size == 500:
+        # different due to variables included
+        features = [(1,4),(1,5),(0,4),(0,5)]
+    else:
+        features = [(0,6),(0,8),(1,6),(1,8)]
     # import data to unnormalize
     normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
     normalize_parameters = normalize_parameters.set_index('feature')
