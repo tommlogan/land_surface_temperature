@@ -756,7 +756,7 @@ width_1col = 8.7/2.54
 width_2col = 17.8/2.54
 golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
 height_1c = width_1col*golden_mean
-height_2c = width_2col*golden_mean/2
+height_2c = width_2col*golden_mean
 # font size
 font_size = 11
 dpi = 500
@@ -861,7 +861,10 @@ def plot_holdouts(loss, grid_size):
     plot boxplots of holdouts
     '''
     plt.figure(figsize=(width_2col, height_2c))
-    g = sns.catplot(y="error", x="time_of_day", hue="model", col = "error_metric", data=loss, sharey = False, kind="box")
+    g = sns.catplot(y="error", x="time_of_day", hue="model",
+                    col = "error_metric", data=loss, sharey = False,
+                    kind="box",
+                    height = height_2c, aspect = width_2col/height_2c)
     g.set_titles('')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
         if i%2==1:
