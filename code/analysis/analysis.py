@@ -41,8 +41,10 @@ RANDOM_SEED = 3201
 
 # other constants
 city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'}
-model_names = {'rf':'random forest','mlr':'multivariate linear','gam':'generalized additive (gam)',
-                'gbrt':'gradient boosted trees','mars':'multivariate adaptive spline (mars)'}
+model_names = {'rf':'random forest','mlr':'multivariate linear',
+                'gam':'generalized additive\n(gam)',
+                'gbrt':'gradient boosted\ntrees',
+                'mars':'multivariate adaptive\nspline (mars)'}
 feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
                 'svf_mean':'sky view factor','dsm_mean':'digital surface model',
                 'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
@@ -901,10 +903,11 @@ def plot_importance(results_swing, grid_size):
                             data=results_swing, kind='bar', col='model',
                             order = feature_order,
                             hue_order=['lst_night_mean','lst_day_mean'],
-                            col_order=['random forest','gradient boosted trees',
-                                        'multivariate adaptive spline (mars)',
-                                        'generalized additive (gam)',
+                            col_order=['random forest','gradient boosted\ntrees',
+                                        'multivariate adaptive\nspline (mars)',
+                                        'generalized additive\n(gam)',
                                         'multivariate linear'],
+                            height = height_2c*2
                             # col_wrap = 3
                             )
 
