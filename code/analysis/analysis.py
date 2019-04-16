@@ -893,7 +893,7 @@ def plot_importance(results_swing, grid_size):
 
     # plot
     # font_size = 15
-    font_scale = 2#1.75
+    font_scale = 2.5#1.75
     with sns.plotting_context("paper", font_scale=font_scale):
     # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
     # plt.figure(figsize=(width_2col, height_2c))
@@ -909,7 +909,7 @@ def plot_importance(results_swing, grid_size):
                             )
 
         g.set_axis_labels("variable influence", "")
-        g.set_titles("{col_name}",size=font_size*1.75)
+        g.set_titles("{col_name}",size=font_size*2)
         # g.tick_params(labelsize=font_size)
 
         new_labels = ['nocturnal','diurnal']
