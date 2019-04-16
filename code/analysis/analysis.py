@@ -756,7 +756,7 @@ width_1col = 8.7/2.54
 width_2col = 17.8/2.54
 golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
 height_1c = width_1col*golden_mean
-height_2c = width_2col/golden_mean
+height_2c = width_2col*golden_mean
 # font size
 font_size = 11
 dpi = 500
