@@ -1,5 +1,7 @@
-\documentclass[]{elsarticle}
+% \documentclass[sort&compress]{elsarticle}
+\documentclass[final,3p,times,twocolumn,sort&compress]{elsarticle}
 %\documentclass[review]{elsarticle}
+
 
 \usepackage{lineno,hyperref}
 \modulolinenumbers[2]
@@ -25,7 +27,7 @@
 %\bibliographystyle{model1a-num-names}
 
 %% Harvard
-%\bibliographystyle{model2-names.bst}\biboptions{authoryear}
+% \bibliographystyle{model2-names.bst}\biboptions{authoryear}
 
 %% Vancouver numbered
 % \usepackage{numcompress}\bibliographystyle{model3-num-names}
@@ -37,17 +39,19 @@
 %\bibliographystyle{model5-names}\biboptions{authoryear}
 
 %% AMA style
-\usepackage{numcompress}\bibliographystyle{model6-num-names}
+% \usepackage{numcompress}
+% \bibliographystyle{model6-num-names}
 
 %% `Elsevier LaTeX' style
-% \bibliographystyle{elsarticle-num}
+\bibliographystyle{elsarticle-num}
+
 %%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
 
 \begin{frontmatter}
 
-\title{Understanding the drivers of diurnal and nocturnal urban land surface temperature}
+\title{Urban characteristics associated with diurnal and nocturnal land surface temperature}
 
 %% or include affiliations in footnotes:
 \author[1]{T.M. Logan\corref{mycorrespondingauthor}}
@@ -64,14 +68,14 @@
 
 \begin{abstract}
 Although heat waves and the urban heat island are nocturnal phenomena, the drivers of land surface temperature during the night remain poorly understood.
-Determining mitigation strategies to reduce land surface temperature is essential given that heat waves, the deadliest natural hazard, are expected to increase in frequency and severity.
+Understanding these drivers is necessary for reducing land surface temperature and mitigating heat waves, the deadliest natural hazard, which are expected to increase in frequency and severity.
 % However, only recently has nocturnal imagery become available from LandSat allowing nighttime land surface temperature to be analyzed.
-However, it remains unclear from existing studies the independent effects of potential drivers, and their relative importance.
-Here, we seek to answer the question: what are the effects and importance of drivers of land surface temperature during both day and night?
+However, the independent effects and relative importance of potential drivers remain unclear from existing studies.
+We seek to answer the question: what are the effects and importance of drivers of land surface temperature during both day and night?
 To do this, we analyze the urban land surface temperature in four cities across the United States.
-We include factors related to vegetation, water, the built-environment, and topography and control them using nonlinear statistical methods which allow for their independent effects to be determined.
-The results of diurnal and nocturnal analysis are compared to determine if previously reported relationships hold between cities and during both the day and night.
-Understanding whether the factors related to high urban land surface temperatures are consistent across US cities is important for climate adaptation planning and heat wave mitigation strategies.
+In our analysis, we include factors related to vegetation, water, the built-environment, and topography and control them using nonlinear statistical methods which allow for their independent effects to be assessed.
+The effects from the diurnal and nocturnal analysis are compared to determine if previously reported relationships hold between cities and during both the day and night.
+Understanding the relationships influencing both nocturnal and diurnal land surface temperature will improve climate adaptation planning and heat wave mitigation.
 \end{abstract}
 
 \begin{keyword}
@@ -124,17 +128,17 @@ To achieve this conduct a comparative study of four cities in the United States 
 Phoenix.
 * studied by Brazel 2007, Guhathakurta 2010.
 
-\begin{figure}[H]
+\begin{figure*}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/map_nocturnal_lst.pdf}
+    \includegraphics[width=\textwidth]{fig/report/map_nocturnal_lst.pdf}
     \caption{The gridded nocturnal land surface temperature in $^o$C of the cities studied. This is change from the mean (average) for each city.}
     \label{fig:map}
-\end{figure}
+\end{figure*}
 
 
-\begin{figure}[H]
+\begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/joyplot_lst.pdf}
+    \includegraphics[width=\linewidth]{fig/report/joyplot_lst_500.pdf}
     \caption{The distribution of nocturnal and diurnal land surface temperature of the cities studied.}
     \label{fig:joy}
 \end{figure}
@@ -147,7 +151,7 @@ To ameliorate the effect of shadows and other ephemeral changes we use at least 
 - include scatter of night vs day LST at 100m - also change the symbols for colorblind - remove background
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=\textwidth]{fig/report/lst_night-vs-day_500.pdf}
+\includegraphics[width=\linewidth]{fig/report/lst_night-vs-day_500.pdf}
 \caption{The land surface temperature in $^o$C of the cities studied at a 500m square resolution}
 \label{fig:scatter_lst}
 \end{center}
@@ -192,34 +196,63 @@ The data was gridded into 500m square and 100m square cells for analysis. For ea
 
 \section{Results and Discussion}
 
-\begin{figure}
+\begin{figure*}
     \centering
     \includegraphics[width=\linewidth]{fig/report/holdout_results_500.pdf}
     \caption{
     The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.
     }
     \label{fig:holdout_results}
-\end{figure}
+\end{figure*}
 
 \subsection{Variables related to Land Surface Temperature}
 
-\begin{figure}
+\begin{figure*}
+\begin{center}
+\includegraphics[width=\textwidth]{fig/report/variableImportance_500.pdf}
+\caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
+In this case there is generally little difference between the importance of day and night variables.}
+\label{fig:importance}
+\end{center}
+\end{figure*}
+
+
+\begin{figure*}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_night.png}
+    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_night_500.png}
     \caption{
     Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
     }
     \label{fig:pdp_night}
-\end{figure}
+\end{figure*}
 
-\begin{figure}
+\begin{figure*}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_day.png}
+    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_day_500.png}
     \caption{
     Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
     }
     \label{fig:pdp_day}
-\end{figure}
+\end{figure*}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_2d_night_500.pdf}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_2dnight}
+\end{figure*}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_2d_day_500.pdf}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_2dday}
+\end{figure*}
+
 
 
 
@@ -228,22 +261,6 @@ See figure \ref{fig:importance} and \ref{fig:pdp}.
 
 Regarding Fig \ref{fig:pdp}, I think I will remove the ``all" line, because in cases such as $alb_mean_min_sl$ (which is the minimum albedo in the surrounding cells (sl = spatial lag)) the values between the cities don't overlap so I think it becomes a proxy for other differences between the city when regressed together.
 
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=\textwidth]{fig/report/variable_importance_selected.pdf}
-\caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
-In this case there is generally little difference between the importance of day and night variables.}
-\label{fig:importance}
-\end{center}
-\end{figure}
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[height=\textheight]{fig/report/partial_dependence.pdf}
-\caption{Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.}
-\label{fig:pdp}
-\end{center}
-\end{figure}
 
 
 
@@ -255,9 +272,12 @@ In this case there is generally little difference between the importance of day 
 
 \section*{References}
 
-\bibliography{mybibfile}
+\bibliography{mybibfile.bib}
 
+\newpage
+\onecolumn
 \appendix
+
 \section{Data sources}
 
 \begin{tabu}to \textwidth{ X[l]  X[c]  X[c] X[l] X[l] }
@@ -290,15 +310,62 @@ IPUMS NHGIS  & Area Level  & 2010 &
 
 
 \section{Additional model results}
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/holdout_results_100.pdf}
+    \caption{
+    The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.
+    }
+    \label{fig:holdout_results}
+\end{figure}
+
+
+
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=\textwidth]{fig/report/holdout_results_mae.pdf}
-\caption{The Mean Absolute Error (MAE) in $^oC$ of the models when fitted on each city and used to predict a random sample from the same city. Better models have lower MAE. This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models. }
-\label{fig:cityholdout_errors}
+\includegraphics[width=\textwidth]{fig/report/variableImportance_100.pdf}
+\caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
+In this case there is generally little difference between the importance of day and night variables.}
+\label{fig:importance}
 \end{center}
 \end{figure}
 
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_night_100.png}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_night}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_day_100.png}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_day}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_2d_night_100.pdf}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_2dnight}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_2d_day_100.pdf}
+    \caption{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    }
+    \label{fig:pdp_2dday}
+\end{figure}
 
 
 \end{document}
