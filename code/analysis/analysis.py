@@ -863,25 +863,27 @@ def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
-    plt.figure(figsize=(width_2col, height_2c))
-    g = sns.catplot(y="error", x="time_of_day", hue="model",
-                    col = "error_metric", data=loss, sharey = False,
-                    kind="box",
-                    height = height_2c, aspect = aspect_2c)
-    g.set_titles('')
-    for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
-        if i%2==1:
-            ax.set_ylim(0,5)
-            ax.set_ylabel('mean absolute error ($^o$C)')
-            ax.set_xlabel('')
-        elif i%2==0:
-            ax.set_ylim(0.5,1)
-            ax.set_ylabel('out-of-bag R$^2$')
-            ax.set_xlabel('')
-            # plt.gca().invert_yaxis()
-    plt.savefig('fig/report/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
-    plt.show()
-    plt.clf()
+    font_scale = 1.75
+    with sns.plotting_context("paper", font_scale=font_scale):
+        plt.figure(figsize=(width_2col, height_2c))
+        g = sns.catplot(y="error", x="time_of_day", hue="model",
+                        col = "error_metric", data=loss, sharey = False,
+                        kind="box",
+                        height = height_2c, aspect = aspect_2c)
+        g.set_titles('')
+        for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
+            if i%2==1:
+                ax.set_ylim(0,5)
+                ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
+                ax.set_xlabel('')
+            elif i%2==0:
+                ax.set_ylim(0.5,1)
+                ax.set_ylabel('out-of-bag R$^2$',size=font_size*1.5)
+                ax.set_xlabel('')
+                # plt.gca().invert_yaxis()
+        plt.savefig('fig/report/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
+        plt.clf()
 
 def plot_importance(results_swing, grid_size):
     '''
@@ -907,7 +909,8 @@ def plot_importance(results_swing, grid_size):
                                         'multivariate adaptive\nspline (mars)',
                                         'generalized additive\n(gam)',
                                         'multivariate linear'],
-                            height = height_2c*2
+                            height = height_2c*2,
+                            aspect = 0.75
                             # col_wrap = 3
                             )
 
