@@ -957,7 +957,7 @@ def scatter_lst(df, cities, grid_size):
     # scatter plot thermal radiance against land surface, colored by city
     # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
     # with plt.style.context('fivethirtyeight'):
-    plt.figure(figsize=(width_1col, height_1c))
+    plt.figure(figsize=(width_2col, height_2c))
     for i in range(len(cities)):
         city = cities[i]
         df_city = df.loc[df['city']==city]
@@ -981,7 +981,7 @@ def joyplot_lst(df, grid_size):
     df1 = df1.dropna(axis=0, how='any')
     # with plt.style.context('fivethirtyeight'):
     fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True,
-                            figsize=(width_1col, height_1c))
+                            figsize=(width_2col, height_2c))
     plt.xlabel('land surface temperature ($^{o}$C)')
     plt.savefig('fig/report/joyplot_lst_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
