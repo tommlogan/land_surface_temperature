@@ -987,10 +987,11 @@ def scatter_lst(df, cities, grid_size):
         city = cities[i]
         df_city = df.loc[df['city']==city]
         plt.scatter(df_city['lst_day_mean'], df_city['lst_night_mean'], label = city, alpha = 0.5)
+        print(df_city['lst_day_mean'].corr(df_city['lst_night_mean']))
     plt.legend(loc='lower right')
-    plt.xlabel('diurnal LST ($^o$C)')
-    plt.ylabel('nocturnal LST ($^o$C)')
-    plt.text(20, 40,'correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
+    plt.xlabel('$\Delta$mean diurnal LST ($^o$C)')
+    plt.ylabel('$\Delta$mean nocturnal LST ($^o$C)')
+    plt.text(-20, 5,'correlation = {0:.2f}'.format(df['lst_day_mean'].corr(df['lst_night_mean'])), ha='left', va='top')
     plt.savefig('fig/report/lst_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
     plt.show()
     plt.clf()
