@@ -756,7 +756,7 @@ width_1col = 8.7/2.54
 width_2col = 17.8/2.54
 golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
 height_1c = width_1col*golden_mean
-height_2c = width_2col*golden_mean
+height_2c = width_2col*golden_mean/2
 # font size
 font_size = 11
 dpi = 500
@@ -860,6 +860,7 @@ def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
+    plt.figure(figsize=(width_2col, height_2c))
     g = sns.catplot(y="error", x="time_of_day", hue="model", col = "error_metric", data=loss, sharey = False, kind="box")
     g.set_titles('')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
@@ -887,21 +888,34 @@ def plot_importance(results_swing, grid_size):
     results_swing = results_swing.replace(model_names)
 
     # plot
-    plt.figure(figsize=(width_2col, height_2c))
-    g = sns.factorplot(x='swing', y='independent', hue='dependent',
-                        data=results_swing, kind='bar', col='model',
-                        order = feature_order, hue_order=['lst_night_mean','lst_day_mean'])
-    g.set_axis_labels("variable importance (swing)", "")
-    g.set_titles("{col_name}")
-    new_labels = ['nocturnal','diurnal']
-    for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+    # font_size = 15
+    with sns.plotting_context("paper", font_scale=1.5):
+    # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+    # plt.figure(figsize=(width_2col, height_2c))
+        g = sns.factorplot(x='swing', y='independent', hue='dependent',
+                            data=results_swing, kind='bar', col='model',
+                            order = feature_order,
+                            hue_order=['lst_night_mean','lst_day_mean'],
+                            col_order=['random forest','gradient boosted trees',
+                                        'multivariate adaptive spline (mars)'],
+                                        # 'generalized additive (gam)',
+                                        # 'multivariate linear'],
+                            col_wrap = 3
+                            )
 
-    # fig = plt.gcf()
-    # fig.set_size_inches(15,20)
+        g.set_axis_labels("variable influence", "")
+        g.set_titles("{col_name}",size=font_size)
+        # g.tick_params(labelsize=font_size)
 
-    plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
-    plt.show()
-    plt.clf()
+        new_labels = ['nocturnal','diurnal']
+        for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+
+        # fig = plt.gcf()
+        # fig.set_size_inches(15,20)
+
+        plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
+        plt.clf()
     return(feature_order)
 
 def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
