@@ -755,7 +755,7 @@ fig_transparency = False
 width_1col = 8.7/2.54
 width_2col = 17.8/2.54
 golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
-height_1c = width_1col/golden_mean
+height_1c = width_1col*golden_mean
 height_2c = width_2col/golden_mean
 # font size
 font_size = 11
@@ -872,7 +872,7 @@ def plot_holdouts(loss, grid_size):
             ax.set_ylabel('out-of-bag R$^2$')
             ax.set_xlabel('')
             # plt.gca().invert_yaxis()
-    plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+    plt.savefig('fig/report/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
     plt.show()
     plt.clf()
 
@@ -887,6 +887,7 @@ def plot_importance(results_swing, grid_size):
     results_swing = results_swing.replace(model_names)
 
     # plot
+    plt.figure(figsize=(width_2col, height_2c))
     g = sns.factorplot(x='swing', y='independent', hue='dependent',
                         data=results_swing, kind='bar', col='model',
                         order = feature_order, hue_order=['lst_night_mean','lst_day_mean'])
@@ -956,6 +957,7 @@ def scatter_lst(df, cities, grid_size):
     # scatter plot thermal radiance against land surface, colored by city
     # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
     # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_1col, height_1c))
     for i in range(len(cities)):
         city = cities[i]
         df_city = df.loc[df['city']==city]
@@ -964,7 +966,7 @@ def scatter_lst(df, cities, grid_size):
     plt.xlabel('diurnal LST ($^o$C)')
     plt.ylabel('nocturnal LST ($^o$C)')
     plt.text(20, 40,'correlation = {0:.2f}'.format(df_city['lst_day_mean'].corr(df_city['lst_night_mean'])), ha='left', va='top')
-    plt.savefig('fig/report/lst_night-vs-day_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
+    plt.savefig('fig/report/lst_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
     plt.show()
     plt.clf()
 
@@ -978,7 +980,8 @@ def joyplot_lst(df, grid_size):
     df1 = df1.replace([np.inf, -np.inf], np.nan)
     df1 = df1.dropna(axis=0, how='any')
     # with plt.style.context('fivethirtyeight'):
-    fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
+    fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True,
+                            figsize=(width_1col, height_1c))
     plt.xlabel('land surface temperature ($^{o}$C)')
     plt.savefig('fig/report/joyplot_lst_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
     plt.show()
@@ -1005,7 +1008,7 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
     Plot the 2d partial dependence
     '''
     # two way partial dependence
-    figs, axes = plt.subplots(2, 2, figsize = (11,8), sharey=False, sharex=False)
+    figs, axes = plt.subplots(2, 2, figsize = (width_2col, height_2c), sharey=False, sharex=False)
     # loop through the top n variables by nocturnal importance
     df_vars = list(df_x)
     if grid_size == 500:
