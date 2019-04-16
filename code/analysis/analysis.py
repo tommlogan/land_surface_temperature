@@ -757,6 +757,7 @@ width_2col = 17.8/2.54
 golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
 height_1c = width_1col*golden_mean
 height_2c = width_2col*golden_mean
+aspect_2c = width_2col/height_2c
 # font size
 font_size = 11
 dpi = 500
@@ -864,7 +865,7 @@ def plot_holdouts(loss, grid_size):
     g = sns.catplot(y="error", x="time_of_day", hue="model",
                     col = "error_metric", data=loss, sharey = False,
                     kind="box",
-                    height = height_2c, aspect = width_2col/height_2c)
+                    height = height_2c, aspect = aspect_2c)
     g.set_titles('')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
         if i%2==1:
@@ -892,7 +893,8 @@ def plot_importance(results_swing, grid_size):
 
     # plot
     # font_size = 15
-    with sns.plotting_context("paper", font_scale=1.5):
+    font_scale = 2#1.75
+    with sns.plotting_context("paper", font_scale=font_scale):
     # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
     # plt.figure(figsize=(width_2col, height_2c))
         g = sns.factorplot(x='swing', y='independent', hue='dependent',
@@ -900,14 +902,14 @@ def plot_importance(results_swing, grid_size):
                             order = feature_order,
                             hue_order=['lst_night_mean','lst_day_mean'],
                             col_order=['random forest','gradient boosted trees',
-                                        'multivariate adaptive spline (mars)'],
-                                        # 'generalized additive (gam)',
-                                        # 'multivariate linear'],
-                            col_wrap = 3
+                                        'multivariate adaptive spline (mars)',
+                                        'generalized additive (gam)',
+                                        'multivariate linear'],
+                            # col_wrap = 3
                             )
 
         g.set_axis_labels("variable influence", "")
-        g.set_titles("{col_name}",size=font_size)
+        g.set_titles("{col_name}",size=font_size*1.75)
         # g.tick_params(labelsize=font_size)
 
         new_labels = ['nocturnal','diurnal']
