@@ -330,6 +330,7 @@ def calc_swing(results_pd, grid_size):
             swing = swing.to_frame('swing').reset_index()
             swing['model'] = m
             swing['dependent'] = h
+            swing['raw'] = model_range['mean'].values
             # save
             results_swing = results_swing.append(swing, ignore_index=True)
         # save results
@@ -1069,6 +1070,29 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
         axes[plot_row, left_right].set_ylabel(feature_names[feature_y])
     # save
     plt.savefig('fig/report/pdp_2d_{}_{}.pdf'.format(time_of_day,grid_size), format='pdf', dpi=500, transparent=True)
+    plt.show()
+    plt.clf()
+
+def scatter_tree_imp(df, cities, grid_size):
+    '''
+    scatter lst night vs day
+    '''
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
+    # scatter plot thermal radiance against land surface, colored by city
+    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
+    # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_2col, height_2c))
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['imp_mean'], df_city['tree_mean'], label = city, alpha = 0.5)
+        print(df_city['imp_mean'].corr(df_city['tree_mean']))
+    plt.legend(loc='lower right')
+    plt.xlabel('\% impervious surface')
+    plt.ylabel('\% tree canopy cover')
+    plt.text(20, 80,'correlation = {0:.2f}'.format(df['imp_mean'].corr(df['tree_mean'])), ha='left', va='top')
+    plt.savefig('fig/report/imp_v_tree_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
     plt.show()
     plt.clf()
 
