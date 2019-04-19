@@ -103,7 +103,7 @@ def import_data(grid_size, selected_vars = True):
         df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     else:
-        df = pd.read_csv('data/data_regressions_{}_20190405.csv'.format(grid_size))
+        df = pd.read_csv('data/data_regressions_{}_20190419.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     return(df)
 
@@ -199,7 +199,7 @@ def prepare_lst_prediction(df):
     thermal radiance values
     '''
     # drop lst
-    lst_vars = ['lst_day_mean','lst_night_mean']
+    lst_vars = ['lst_day_mean','lst_night_mean','lst_night_max','lst_day_max']
     lst_mean = df[lst_vars].copy()
     df = df.drop(lst_vars, axis=1)
 
@@ -225,9 +225,13 @@ def define_response_lst(y_train, y_test):
     y = {}
     y['day_train'] = y_train['lst_day_mean']
     y['night_train'] = y_train['lst_night_mean']
+    y['nightmax_train'] = y_train['lst_night_max']
+    y['daymax_train'] = y_train['lst_day_max']
     # test
     y['day_test'] = y_test['lst_day_mean']
     y['night_test'] = y_test['lst_night_mean']
+    y['nightmax_test'] = y_test['lst_night_max']
+    y['daymax_test'] = y_test['lst_day_max']
     return(y)
 
 
@@ -244,7 +248,7 @@ def calculate_partial_dependence(df, grid_size, boot_index = None):
     df_reference = df.copy()
     feature_resolution = 25
     # loop day and night
-    for h in ['lst_day_mean', 'lst_night_mean']:
+    for h in ['lst_day_mean', 'lst_night_mean', 'lst_night_max','lst_day_max']:
         print(h)
         ###
         # fit models
@@ -391,28 +395,17 @@ def regression_null(y, city, predict_quant, loss):
     # predict the model
     predict_day = np.ones(len(y['day_test'])) * np.mean(y['day_train'])
     predict_night = np.ones(len(y['night_test'])) * np.mean(y['night_train'])
+    predict_nightmax = np.ones(len(y['nightmax_test'])) * np.mean(y['nightmax_train'])
+    predict_daymax = np.ones(len(y['daymax_test'])) * np.mean(y['daymax_train'])
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'null', city, predict_quant)
 
     # calculate the MAE
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    # code.interact(local=locals())
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -424,34 +417,29 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
     # train the model
     gbm_day_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
     gbm_night_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    reg_nightmax = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    reg_daymax = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
     # code.interact(local = locals())
     gbm_day_reg.fit(X_train, y['day_train'])
     gbm_night_reg.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # predict the model
     predict_day = gbm_day_reg.predict(X_test)
     predict_night = gbm_night_reg.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
     # calculate the error metrics
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -463,34 +451,29 @@ def regression_linear(X_train, y, X_test, city, predict_quant, loss):
     # train the model
     mlr_day_reg = LinearRegression()
     mlr_night_reg = LinearRegression()
+    reg_daymax = LinearRegression()
+    reg_nightmax = LinearRegression()
+
     mlr_day_reg.fit(X_train, y['day_train'])
     mlr_night_reg.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
 
     # predict the model
     predict_day = mlr_day_reg.predict(X_test)
     predict_night = mlr_night_reg.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'mlr', city, predict_quant)
 
     # calculate the MAE
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -502,8 +485,12 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     # train the model
     reg_day = RandomForestRegressor(n_estimators=500, max_features=1/3)
     reg_night = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_nightmax = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_daymax = RandomForestRegressor(n_estimators=500, max_features=1/3)
     reg_day.fit(X_train, y['day_train'])
     reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # predict the model
     predict_day = reg_day.predict(X_test)
@@ -513,22 +500,10 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
     # calculate the error metrics
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -540,33 +515,27 @@ def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     # train the model
     reg_day = Earth(max_degree=1, penalty=1.0, endspan=5)
     reg_night = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_nightmax = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_daymax = Earth(max_degree=1, penalty=1.0, endspan=5)
     reg_day.fit(X_train, y['day_train'])
     reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # predict the model
     predict_day = reg_day.predict(X_test)
     predict_night = reg_night.predict(X_test)
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
     # calculate the error metrics
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -578,8 +547,12 @@ def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     # train the model
     reg_day = LinearGAM(n_splines=10)
     reg_night = LinearGAM(n_splines=10)
+    reg_nightmax = LinearGAM(n_splines=10)
+    reg_daymax = LinearGAM(n_splines=10)
     reg_day.fit(X_train, y['day_train'])
     reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # predict the model
     predict_day = reg_day.predict(X_test)
@@ -589,22 +562,10 @@ def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
     # calculate the error metrics
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    loss = loss.append({
-        'time_of_day': 'diurnal',
-        'hold_num': city,
-        'model': model,
-        'error_metric': 'r2',
-        'error': r2_day
-    }, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -647,6 +608,34 @@ def full_gbm_regression(df, cities, vars_selected=None):
     reg_gbm['covariates'] = X_train[city].columns
     return(reg_gbm, X_train)
 
+def record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax):
+    loss = loss.append({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_nightmax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_daymax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': mae_nightmax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': mae_daymax}, ignore_index=True)
+
+    return(loss)
+
+def calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax):
+    mae_day = np.mean(abs(predict_day - y['day_test']))
+    mae_night = np.mean(abs(predict_night - y['night_test']))
+    r2_day = r2_score(y['day_test'], predict_day)
+    r2_night = r2_score(y['night_test'], predict_night)
+    mae_daymax = np.mean(abs(predict_daymax - y['daymax_test']))
+    mae_nightmax = np.mean(abs(predict_nightmax - y['nightmax_test']))
+    r2_daymax = r2_score(y['daymax_test'], predict_day)
+    r2_nightmax = r2_score(y['nightmax_test'], predict_night)
+    return(mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax)
 
 ###
 # Supporting code
@@ -997,6 +986,31 @@ def scatter_lst(df, cities, grid_size):
     plt.show()
     plt.clf()
 
+
+def scatter_maxlst(df, cities, grid_size):
+    '''
+    scatter max lst night vs day
+    '''
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
+    # scatter plot thermal radiance against land surface, colored by city
+    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
+    # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_2col, height_2c))
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['lst_day_max'], df_city['lst_night_max'], label = city, alpha = 0.5)
+        print(df_city['lst_day_max'].corr(df_city['lst_night_max']))
+    plt.legend(loc='lower right')
+    plt.xlabel('$\Delta$mean diurnal LST ($^o$C)')
+    plt.ylabel('$\Delta$mean nocturnal LST ($^o$C)')
+    plt.text(-20, 5,'correlation = {0:.2f}'.format(df['lst_day_max'].corr(df['lst_night_max'])), ha='left', va='top')
+    plt.savefig('fig/report/lst_max_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
+    plt.show()
+    plt.clf()
+
+
 def joyplot_lst(df, grid_size):
     '''
     joy (ridge) plot of lst night vs day
@@ -1035,12 +1049,12 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
     Plot the 2d partial dependence
     '''
     # two way partial dependence
-    figs, axes = plt.subplots(2, 2, figsize = (width_2col, height_2c), sharey=False, sharex=False)
+    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c/2*3), sharey=False, sharex=False)
     # loop through the top n variables by nocturnal importance
     df_vars = list(df_x)
     if grid_size == 500:
         # different due to variables included
-        features = [(1,4),(1,5),(0,4),(0,5)]
+        features = [(1,4),(1,5),(0,4),(0,5),(2,4),(2,5)]
     else:
         features = [(0,6),(0,8),(1,6),(1,8)]
     # import data to unnormalize

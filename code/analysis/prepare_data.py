@@ -8,11 +8,11 @@ import pandas as pd
 import numpy as np
 import time
 import code
-scale = False
+scale = True
 def main(scale=True):
 
     cities = ['bal','det','phx','por']
-    grid_size = 100
+    grid_size = 500
     # init all city dataframe
     df = pd.DataFrame()
     add_index = 0
@@ -59,6 +59,8 @@ def scaling_city(df_city, scale):
     # drop any values where the landsurface temperature is inf or nan
     df_city = df_city[np.isfinite(df_city['lst_day_mean'])]
     df_city = df_city[np.isfinite(df_city['lst_night_mean'])]
+    df_city = df_city[np.isfinite(df_city['lst_night_max'])]
+    df_city = df_city[np.isfinite(df_city['lst_day_max'])]
 
     ## for phoenix - remove large rural areas outside of lidar zone
     if df_city.city.iloc[100] == 'phx':
@@ -107,7 +109,7 @@ def scaling_city(df_city, scale):
 
     ### LST ###
     # drop the lst vars except night and day mean
-    vars_response = ['lst_day_mean','lst_night_mean']
+    vars_response = ['lst_day_mean','lst_night_mean','lst_night_max','lst_day_max']
     vars_lst = [i for i in vars_all if 'lst' in i]
     # remove vars to keep
     vars_lst_drop = [x for x in vars_lst if x not in vars_response]
