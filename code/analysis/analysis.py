@@ -405,7 +405,7 @@ def regression_null(y, city, predict_quant, loss):
     mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -439,7 +439,7 @@ def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
 
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -473,7 +473,7 @@ def regression_linear(X_train, y, X_test, city, predict_quant, loss):
     mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -495,6 +495,8 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     # predict the model
     predict_day = reg_day.predict(X_test)
     predict_night = reg_night.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
@@ -503,7 +505,7 @@ def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
     mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -525,8 +527,8 @@ def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     # predict the model
     predict_day = reg_day.predict(X_test)
     predict_night = reg_night.predict(X_test)
-    reg_daymax.fit(X_train, y['daymax_train'])
-    reg_nightmax.fit(X_train, y['nightmax_train'])
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
@@ -535,7 +537,7 @@ def regression_mars(X_train, y, X_test, city, predict_quant, loss):
     mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -557,6 +559,8 @@ def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     # predict the model
     predict_day = reg_day.predict(X_test)
     predict_night = reg_night.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
     plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
@@ -565,7 +569,7 @@ def regression_gam(X_train, y, X_test, city, predict_quant, loss):
     mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
 
     # record results
-    record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
 
     return(loss)
 
@@ -621,8 +625,8 @@ def record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_d
     loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
     loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_nightmax}, ignore_index=True)
     loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_daymax}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': mae_nightmax}, ignore_index=True)
-    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': mae_daymax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'mae','error': mae_nightmax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'mae','error': mae_daymax}, ignore_index=True)
 
     return(loss)
 
@@ -633,8 +637,8 @@ def calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nigh
     r2_night = r2_score(y['night_test'], predict_night)
     mae_daymax = np.mean(abs(predict_daymax - y['daymax_test']))
     mae_nightmax = np.mean(abs(predict_nightmax - y['nightmax_test']))
-    r2_daymax = r2_score(y['daymax_test'], predict_day)
-    r2_nightmax = r2_score(y['nightmax_test'], predict_night)
+    r2_daymax = r2_score(y['daymax_test'], predict_daymax)
+    r2_nightmax = r2_score(y['nightmax_test'], predict_nightmax)
     return(mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax)
 
 ###
@@ -867,7 +871,7 @@ def plot_holdouts(loss, grid_size):
                 ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
                 ax.set_xlabel('')
             elif i%2==0:
-                ax.set_ylim(0.5,1)
+                ax.set_ylim(0,1)
                 ax.set_ylabel('out-of-bag R$^2$',size=font_size*1.5)
                 ax.set_xlabel('')
                 # plt.gca().invert_yaxis()
@@ -915,6 +919,50 @@ def plot_importance(results_swing, grid_size):
         # fig.set_size_inches(15,20)
 
         plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
+        plt.clf()
+    return(feature_order)
+
+def plot_importance_max(results_swing, grid_size):
+    '''
+    plot the feature importance of the variables and the cities
+    '''
+    # order features by nocturnal swing
+    results_swing = results_swing.replace(feature_names)
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_max'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
+    results_swing = results_swing.replace(model_names)
+
+    # plot
+    # font_size = 15
+    font_scale = 3#1.75
+    with sns.plotting_context("paper", font_scale=font_scale):
+    # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+    # plt.figure(figsize=(width_2col, height_2c))
+        g = sns.factorplot(x='swing', y='independent', hue='dependent',
+                            data=results_swing, kind='bar', col='model',
+                            order = feature_order,
+                            hue_order=['lst_night_max','lst_day_max'],
+                            col_order=['random forest','gradient boosted\ntrees',
+                                        'multivariate adaptive\nspline (mars)',
+                                        'generalized additive\n(gam)',
+                                        'multivariate linear'],
+                            height = height_2c*2,
+                            aspect = 0.75
+                            # col_wrap = 3
+                            )
+
+        g.set_axis_labels("variable influence", "")
+        g.set_titles("{col_name}",size=font_size*2.5)
+        # g.tick_params(labelsize=font_size)
+
+        new_labels = ['nocturnal_max','diurnal_max']
+        for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+
+        # fig = plt.gcf()
+        # fig.set_size_inches(15,20)
+
+        plt.savefig('fig/report/variableImportance_max_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
         plt.clf()
     return(feature_order)
