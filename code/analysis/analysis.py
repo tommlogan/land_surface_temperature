@@ -1232,7 +1232,7 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
     Plot the 2d partial dependence
     '''
     # two way partial dependence
-    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c/3), sharey=False, sharex=False)
+    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c*2), sharey=False, sharex=False)
     # loop through the top n variables by nocturnal importance
     df_vars = list(df_x)
     if grid_size == 500:
