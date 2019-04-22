@@ -79,7 +79,7 @@ Understanding the relationships influencing both nocturnal and diurnal land surf
 \end{abstract}
 
 \begin{keyword}
-Urban climate $|$ LandSat $|$ Land surface temperature $|$ Urban canyon $|$ Machine learning
+Urban climate; LandSat; Land surface temperature; Urban canyon; Machine learning
 \end{keyword}
 
 \end{frontmatter}
@@ -94,11 +94,11 @@ The UHI results from heat captured during the day being released during the nigh
 This increase in nocturnal temperature reduces people's ability to cool off during the night and drives an increase in mortality \cite{Echevarria_Icaza2016-fr, Murage2017-wj}.
 
 Urban heat is studied in two ways.
-The first uses weather station data to analyze air temperature \cite{Scott2016-lc}(etc.) while the other examines the land surface temperature (LST) using remote sensing \cite{Imhoff2010-lf, Peng2012-iy, Peng2018-cp, Zhou2014-wc}.
-Although there are differences between air temperature and surface temperature \cite{Good2016-yk}, the extensive spatial coverage is a major advantage and enables comparative studies \cite{Hung2006-qy}.
+The first uses weather station data to analyze air temperature \cite{Scott2016-lc}(etc.) while the other uses remote sensing to examine the land surface temperature (LST) \cite{Imhoff2010-lf, Peng2012-iy, Peng2018-cp, Zhou2014-wc}.
+Although there are differences between land temperature and air temperature \cite{Good2016-yk}, the extensive spatial coverage of LST data is a major advantage and enables comparative studies \cite{Hung2006-qy}.
 For the sake of comparative analysis, we use LST in this study.
 
-Most existing LST studies focus on the daytime \cite{Peng2018-cp,Chun2018-so,Wang2019-water,Zhou2018-iy},due to the lack of availability of nocturnal satellite images.
+Most existing LST studies focus on the daytime \cite{Peng2018-cp,Chun2018-so,Wang2019-water,Zhou2018-iy}.
 However, the mechanisms and urban characteristics driving LST allegedly differs between night and day \cite{Hung2006-qy, Chun2017-mm, Nichol2005-mm, Wicki2017-fv, Echevarria_Icaza2016-fr,Sobstyl2018-wt, Peng2012-iy, Zhou2014-wc, Zhao2017-cc}. 
 Given that UHI is a nocturnal phenomena and the lack of studies focused on nocturnal LST, we are yet to fully understand what drives LST during the night.  
 
@@ -157,12 +157,13 @@ To ameliorate the effect of shadows and other ephemeral changes \cite{Zhou2018-i
 So we can conduct the comparative study between the cities, the land surface temperature for each city is calculated as the difference from the city's mean. 
 
 \begin{figure}
-\begin{center}
-\includegraphics[width=\linewidth]{fig/report/lst_night-vs-day_500.png}
-\caption{The land surface temperature in $^o$C of the cities studied at a 500m square resolution}
-\label{fig:scatter_lst}
-\end{center}
+    \begin{center}
+    \includegraphics[width=\linewidth]{fig/report/scatter_500.png}
+    \caption{The land surface temperature in $^o$C of the cities studied at a 500m square resolution}
+    \label{fig:scatter_lst}
+    \end{center}
 \end{figure}
+
 \subsection{Independent variables}
 
 \textit{Albedo}. Albedo is a measure of the reflectivity or brightness of a surface. It is normalized between 0-1 where the darker surfaces are lower values. Albedo is calculated using the LandSat8 images using the algorithm described in \cite{Smith2010-nw, Liang2001-jd}. 
@@ -306,39 +307,35 @@ Supports suggestion that 2D metrics outperform 3D metrics \cite{Berger2017-lx}
 
 \begin{figure*}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/holdout_results_500.pdf}
-    \caption{
-    The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models when fitted on three of the four cities and then used to predict the remaining city. OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. Good models have MAE near 0. The gradient boosted regression forest generally outperforms the other models, except when predicting Detroit. Note that the R$^2$ axis is truncated at -1, although the multiple linear regression for diurnal land surface temperature tested on Phoenix has an OOB R$^2$ of -9.  This shows that the gradient boosted regression forest (gbm) consistently outperforms the multiple linear regression and null models.
+    \includegraphics[width=\linewidth]{fig/report/holdout_500.png}
+    \caption[Holdout cross-validation results at 500 meter resolution]{
+    The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models from a 100-fold holdout cross-validation. 
+    The models were trained on 80\% of the data and tested on the unseen 20\%.
+    When selecting data for the training and testing sets, spatial subsets were used to account for spatial similarities. 
+    OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. 
+    Good models have MAE near 0.
     }
     \label{fig:holdout_500}
 \end{figure*}
 
 \begin{figure*}
-\begin{center}
-\includegraphics[width=\textwidth]{fig/report/variableImportance_500.pdf}
-\caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
-In this case there is generally little difference between the importance of day and night variables.}
-\label{fig:importance_500}
-\end{center}
-\end{figure*}
-
-
-\begin{figure*}
     \centering
-    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_night_500.png}
-    \caption{
-    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
+    \includegraphics[width=\linewidth]{fig/report/pdp_500.png}
+    \caption[Partial dependence plots for LST at 500 meter resolution]{
+    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each urban characteristic as the other variables are held at their average (mean) value. 
+    The left hand side shows the effect each variable has on the (a) mean land surface temperature (LST) during the night, (b) maximum LST during the night, (c) mean LST during the day, (d) maximum LST during the day. 
+    This is for the 500 meter resolution.
     }
     \label{fig:pdp_night_500}
 \end{figure*}
 
 \begin{figure*}
-    \centering
-    \includegraphics[width=\linewidth]{fig/report/pdp_uncert_day_500.png}
-    \caption{
-    Partial dependence plots show how the land surface temperature ($^oC$, y axis) changes with each variable as the other variables are held at their average value. The left hand side shows the effect each variable has on LST during the night, while the right hand side shows the effect during the day. This shows that trees coverage in the cell has the greatest influence on the temperature, and the greenness (NDVI) of that coverage matters during the day.
-    }
-    \label{fig:pdp_day_500}
+    \begin{center}
+    \includegraphics[width=\linewidth]{fig/report/importance_500.png}
+    \caption[Variable influence on LST at 500 meter resolution]{
+    The variable influence, measured by swing, shows the relative importance of each urban characteristic on land surface temperature.}
+    \label{fig:importance_500}
+    \end{center}
 \end{figure*}
 
 \begin{figure*}
@@ -387,8 +384,9 @@ To mitigate the effects of future heat waves, cities need to reduce their imperv
 
 % Here are two sample references: \cite{Feynman1963118,Dirac1953888}.
 \section*{Acknowledgements}
-TML - Hazard SEES, Rackham PreDoctoral
-What else?
+Hazard SEES\\
+TML - Rackham PreDoctoral\\
+Anything else?
 
 
 \section*{References}
@@ -428,10 +426,25 @@ IPUMS NHGIS  & Area Level  & 2010 &
 \end{tabu}
 
 
+\newpage
+\section{City specific results}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/pdp_cities_500.png}
+    \caption[City specific partial dependence plots]{
+    The partial dependence plots for a random forest model trained on each city.
+    This is to evaluate whether the influence of urban characteristics on LST is consistent between the cities.
+    }
+    \label{fig:cities_500}
+\end{figure}
 
 
-\section{Additional model results}
-\begin{figure}
+\newpage
+\section{100 meter resolution results}
+\label{sec:100_meter}
+The figures presented in the main text, are replicated here based on data at a 100 meter resolution.
+
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/holdout_results_100.pdf}
     \caption{
@@ -442,7 +455,7 @@ IPUMS NHGIS  & Area Level  & 2010 &
 
 
 
-\begin{figure}
+\begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{fig/report/variableImportance_100.pdf}
 \caption{The variable importance for the regression during the night (to the left) and the day (to the right). Variable importance indicates the amount that each variable improves the performance of the regression.
