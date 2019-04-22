@@ -381,6 +381,84 @@ def boot_pd(df, grid_size, boot_index):
     # calculate the pd
     calculate_partial_dependence(df, grid_size, boot_index)
 
+
+def calculate_partial_dependence_city(df_full, grid_size, cities):
+    '''
+    fit the models to the entire dataset
+    loop through each feature
+    vary the feature over its range
+    predict the target variable to see how it is influenced by the feature
+    '''
+    results_partial = pd.DataFrame()
+    for city in cities:
+        print(city)
+        df = df_full[df_full.city == city]
+        df, target = prepare_lst_prediction(df)
+        df = subset_regression_data(df, df)[0]
+        df_reference = df.copy()
+        feature_resolution = 25
+        # loop day and night
+        for h in ['lst_day_mean', 'lst_night_mean', 'lst_night_max','lst_day_max']:
+            print(h)
+            ###
+            # fit models
+            ###
+            # gradient boosted tree
+            # gbm = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+            # gbm.fit(df, target[h])
+            # random forest
+            rf = RandomForestRegressor(random_state=RANDOM_SEED, n_estimators=500, max_features=1/3)
+            rf.fit(df, target[h])
+            # mars
+            # mars = Earth(max_degree=1, penalty=1.0, endspan=5)
+            # mars.fit(df, target[h])
+            # GAM
+            # gam = LinearGAM(n_splines=10).fit(df, target[h])
+            # linear
+            # mlr = LinearRegression()
+            # mlr = mlr.fit(df, target[h])
+            ###
+            # loop through features and their ranges
+            ###
+            var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                            'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                            'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                            'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+            for var_interest in var_interests[h]: #['tree_mean','density_housesarea']:
+                # loop through range of var_interest
+                var_values = np.linspace(np.percentile(df[var_interest],2.5),np.percentile(df[var_interest],97.5), feature_resolution)
+                df_change = df.copy()
+                for x in var_values:
+                    df_change[var_interest] = x
+                    # gbm
+                    # pred = gbm.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'gbrt', 'dependent':h,'independent':var_interest,
+                                                              # 'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # rf
+                    pred = rf.predict(df_change)
+                    # save results
+                    results_partial = results_partial.append({'model': 'rf', 'dependent':h,'independent':var_interest,
+                                                              'x':x, 'mean':np.mean(pred), 'city': city}, ignore_index=True)
+                    # mars
+                    # pred = mars.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'mars', 'dependent':h,'independent':var_interest,
+                    #                                           'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # # gam
+                    # pred = gam.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'gam', 'dependent':h,'independent':var_interest,
+                    #                                           'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # # mlr
+                    # pred = mlr.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
+                                                              # 'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # save results
+                results_partial.to_csv('data/regression/city_{}/results_partial_dependence_{}.csv'.format(grid_size, grid_size))
+
+
 ###
 # Regression code
 ###
@@ -863,7 +941,8 @@ def plot_holdouts(loss, grid_size):
         g = sns.catplot(y="error", x="time_of_day", hue="model",
                         col = "error_metric", data=loss, sharey = False,
                         kind="box",
-                        height = height_2c, aspect = aspect_2c)
+                        height = height_2c, aspect = aspect_2c,
+                        legend = False)
         g.set_titles('')
         for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
             if i%2==1:
@@ -923,48 +1002,52 @@ def plot_importance(results_swing, grid_size):
         plt.clf()
     return(feature_order)
 
-def plot_importance_max(results_swing, grid_size):
+def plot_importance_max(df, grid_size):
     '''
     plot the feature importance of the variables and the cities
     '''
+    df = df.replace(feature_names)
+    df = df.replace(model_names)
     # order features by nocturnal swing
-    results_swing = results_swing.replace(feature_names)
-    feature_order = list(results_swing[results_swing.dependent=='lst_night_max'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        results_swing = df.copy()
+        results_swing = results_swing[results_swing.dependent == dep]
+        feature_order = list(results_swing[results_swing.dependent==dep].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
 
-    results_swing = results_swing.replace(model_names)
+        # plot
+        # font_size = 15
+        font_scale = 1.5#1.75
+        with sns.plotting_context("paper", font_scale=font_scale):
+        # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+        # plt.figure(figsize=(width_2col, height_2c))
+            g = sns.catplot(x='swing', y='independent', hue='dependent',
+                                data=results_swing, kind='bar', col='model',
+                                order = feature_order,
+                                # row_order=['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max'],
+                                col_order=['random forest','gradient boosted\ntrees',
+                                            'multivariate adaptive\nspline (mars)',
+                                            'generalized additive\n(gam)',
+                                            'multivariate linear'],
+                                height = height_2c,
+                                aspect = 0.75,
+                                # col_wrap = 3
+                                legend = False
+                                )
 
-    # plot
-    # font_size = 15
-    font_scale = 3#1.75
-    with sns.plotting_context("paper", font_scale=font_scale):
-    # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
-    # plt.figure(figsize=(width_2col, height_2c))
-        g = sns.factorplot(x='swing', y='independent', hue='dependent',
-                            data=results_swing, kind='bar', col='model',
-                            order = feature_order,
-                            hue_order=['lst_night_max','lst_day_max'],
-                            col_order=['random forest','gradient boosted\ntrees',
-                                        'multivariate adaptive\nspline (mars)',
-                                        'generalized additive\n(gam)',
-                                        'multivariate linear'],
-                            height = height_2c*2,
-                            aspect = 0.75
-                            # col_wrap = 3
-                            )
+            g.set_axis_labels("variable influence", "")
+            g.set_titles("{col_name}",size=font_size*2.5/2)
+            g.set(xlim=(0, 0.4))
+            # g.tick_params(labelsize=font_size)
 
-        g.set_axis_labels("variable influence", "")
-        g.set_titles("{col_name}",size=font_size*2.5)
-        # g.tick_params(labelsize=font_size)
+            # new_labels = ['nocturnal_max','diurnal_max']
+            # for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
 
-        new_labels = ['nocturnal_max','diurnal_max']
-        for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+            # fig = plt.gcf()
+            # fig.set_size_inches(15,20)
 
-        # fig = plt.gcf()
-        # fig.set_size_inches(15,20)
-
-        plt.savefig('fig/report/variableImportance_max_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
-        plt.show()
-        plt.clf()
+            plt.savefig('fig/working/variableImportance_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
+            plt.show()
+            plt.clf()
     return(feature_order)
 
 def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
@@ -1011,6 +1094,54 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
         fig.clf()
 
+def plot_dependence_city(grid_size):
+    '''
+    Plot the partial dependence for the different regressors
+    '''
+    # import data
+    pdp_results = pd.read_csv('data/regression/city_{}/results_partial_dependence_{}.csv'.format(grid_size, grid_size))
+    # undo the normalization
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+    for index, row in pdp_results.iterrows():
+        feature = row.independent
+        pdp_results.loc[index,'x'] = row['x']*normalize_parameters.loc[feature,'sd'] + normalize_parameters.loc[feature,'mean']
+    # humanize the names
+    pdp_results = pdp_results.replace(feature_names)
+    pdp_results = pdp_results.replace(model_names)
+    var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                    'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                    'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                    'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+    # plot
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        feature_order = var_interests[dep]
+        feature_order = [feature_names[x] for x in feature_order]
+        pdp_results_plot = pdp_results[pdp_results.dependent == dep]
+        # plot
+        # font_size = 15
+        font_scale = 1.5#1.75
+        with sns.plotting_context("paper", font_scale=font_scale):
+        # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+        # plt.figure(figsize=(width_2col, height_2c))
+            g = sns.FacetGrid(pdp_results_plot, col="independent", hue = 'city',
+                                sharex=False, col_order = feature_order,
+                                height = height_2c,
+                                aspect = 1
+                                )
+            g = g.map(plt.plot, 'x', 'mean')
+            g.set_titles('')
+            axes = g.axes[0]
+            i = 0
+            for ax in axes:
+                ax.axhline(0, ls='--', color='red')
+                ax.set_xlabel(feature_order[i])
+                i += 1
+
+            plt.savefig('fig/working/pdp_city_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
+            plt.show()
+            plt.clf()
+
 def scatter_lst(df, cities, grid_size):
     '''
     scatter lst night vs day
@@ -1027,9 +1158,11 @@ def scatter_lst(df, cities, grid_size):
         plt.scatter(df_city['lst_day_mean'], df_city['lst_night_mean'], label = city, alpha = 0.5)
         print(df_city['lst_day_mean'].corr(df_city['lst_night_mean']))
     plt.legend(loc='lower right')
-    plt.xlabel('$\Delta$mean diurnal LST ($^o$C)')
-    plt.ylabel('$\Delta$mean nocturnal LST ($^o$C)')
-    plt.text(-20, 5,'correlation = {0:.2f}'.format(df['lst_day_mean'].corr(df['lst_night_mean'])), ha='left', va='top')
+    plt.xlabel('$\Delta$mean, average daytime LST ($^o$C)')
+    plt.ylabel('$\Delta$mean, average nighttime LST ($^o$C)')
+    plt.xlim(-25,15)
+    plt.ylim(-15,15)
+    plt.text(-23, 10,'correlation = {0:.2f}'.format(df['lst_day_mean'].corr(df['lst_night_mean'])), ha='left', va='top')
     plt.savefig('fig/report/lst_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
     plt.show()
     plt.clf()
@@ -1051,9 +1184,11 @@ def scatter_maxlst(df, cities, grid_size):
         plt.scatter(df_city['lst_day_max'], df_city['lst_night_max'], label = city, alpha = 0.5)
         print(df_city['lst_day_max'].corr(df_city['lst_night_max']))
     plt.legend(loc='lower right')
-    plt.xlabel('$\Delta$mean diurnal LST ($^o$C)')
-    plt.ylabel('$\Delta$mean nocturnal LST ($^o$C)')
-    plt.text(-20, 5,'correlation = {0:.2f}'.format(df['lst_day_max'].corr(df['lst_night_max'])), ha='left', va='top')
+    plt.xlabel('$\Delta$mean, maximum daytime LST ($^o$C)')
+    plt.ylabel('$\Delta$mean, maximum nighttime LST ($^o$C)')
+    plt.xlim(-25,15)
+    plt.ylim(-15,15)
+    plt.text(-23, 10,'correlation = {0:.2f}'.format(df['lst_day_max'].corr(df['lst_night_max'])), ha='left', va='top')
     plt.savefig('fig/report/lst_max_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
     plt.show()
     plt.clf()
@@ -1097,7 +1232,7 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
     Plot the 2d partial dependence
     '''
     # two way partial dependence
-    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c/2*3), sharey=False, sharex=False)
+    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c), sharey=False, sharex=False)
     # loop through the top n variables by nocturnal importance
     df_vars = list(df_x)
     if grid_size == 500:
