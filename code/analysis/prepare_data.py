@@ -12,7 +12,7 @@ scale = True
 def main(scale=True):
 
     cities = ['bal','det','phx','por']
-    grid_size = 500
+    grid_size = 100
     # init all city dataframe
     df = pd.DataFrame()
     add_index = 0
