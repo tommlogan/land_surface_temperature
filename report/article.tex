@@ -62,26 +62,29 @@
 \author[2]{B. Zaitchik}
 \author[1]{S. Guikema}
 \author[]{A. Nisbet}
-
+% \footnote{Beginning September 2019, T Logan will be a faculty member at the University of Canterbury, NZ}
 
 \address[1]{Industrial and Operations Engineering, University of Michigan, Ann Arbor, MI}
 \address[2]{Earth and Planetary Sciences, Johns Hopkins University, Baltimore, MD}
 
 \begin{abstract}
 Although heat waves and the urban heat island are nocturnal phenomena, the drivers of land surface temperature during the night remain poorly understood.
-Understanding these drivers is necessary for reducing land surface temperature and mitigating heat waves, the deadliest natural hazard, which are expected to increase in frequency and severity.
+Understanding these drivers is necessary for reducing land surface temperature and mitigating the effects of heat waves, the deadliest natural hazard, which are expected to increase in frequency and severity.
 % However, only recently has nocturnal imagery become available from LandSat allowing nighttime land surface temperature to be analyzed.
 However, the independent effects and relative importance of potential drivers remain unclear from existing studies.
 We seek to answer the question: ``What is the relative importance and nonlinear affects of urban characteristics associated with land surface temperature during both the day and night?'' 
-To do this, we analyze the urban land surface temperature in four cities across the United States.
+To do this, we analyze urban land surface temperature in four cities across the United States.
 In our analysis, we include variables related to vegetation, water, the built-environment, and topography. 
-We control these variables using nonlinear statistical methods which allow for their independent effects to be assessed.
+We model the effects of these variables using nonlinear statistical methods which allow for their independent effects to be assessed.
 The effects from the daytime and nighttime analysis are compared to determine if previously reported relationships hold between cities and during both the day and night.
-Understanding the relationships influencing both night and day land surface temperature will improve climate adaptation planning and heat wave mitigation.
+Our results suggest that vegetation and impervious surfaces are the most important urban characteristics associated with land surface temperature.
+Increasing and decreasing these, respectively, is necessary for reducing high urban temperatures during both night and day.
+Our results also demonstrate the potential for using nonlinear statistical analysis to investigate land surface temperature and its relationships with urban characteristics. 
+Improved understanding of these relationships influencing both night and day land surface temperature will assist planners undertaking climate change adaptation and heat wave mitigation.
 \end{abstract}
 
 \begin{keyword}
-Urban climate; LandSat; Land surface temperature; Urban canyon; Machine learning; Convolutional Neural Network
+LandSat; Land surface temperature; Urban canyon; Machine learning; Convolutional Neural Network
 \end{keyword}
 
 \end{frontmatter}
@@ -106,7 +109,7 @@ Given that UHI is a nocturnal phenomena, the lack of study on nighttime LST leav
 This can now be addressed as high resolution nighttime satellite images have become available.
 
 Existing studies that have analyzed LST have used low-resolution imagery, making it challenging to deduce a clear understanding of the the influence and relative importance of the associated urban characteristics \cite{Chun2017-mm, Echevarria_Icaza2016-fr, Wicki2017-fv, Zhou2014-wc}. 
-Additionally, these studies can be enhanced by: 1) studying multiple regions, 2) considering 2D and 3D urban characteristics, 3) improving their statistical techniques.
+Additionally, these studies can be enhanced by: 1) studying multiple regions, 2) considering 2D and 3D urban characteristics, 3) diversifying their statistical models and relax their linear assumption, 4) rigorously testing and validing their models.
 The data availability has limited previous nocturnal studies, meaning that many rely on MODIS images with a 1km resolution \cite{Zhou2014-wc, Echevarria_Icaza2016-fr,Wang2019-tree,Peng2012-iy}.
 1km resolution makes it difficult to attribute LST to urban characteristics.
 However, 30-m resolution LandSat8 (L8) night scenes have recently become available. 
@@ -115,23 +118,25 @@ Due to the wide spatial availability of L8 imagery, comparative studies between 
 Existing studies have also been criticized for the explanatory variables they've used \cite{Chun2017-mm,Peng2018-cp}.
 There is ongoing disagreement regarding the importance of 3D (e.g. building height) vs 2D (such as albedo) variables.  
 Competing studies suggest that 3D factors are not important \cite{Berger2017-lx}, while others find that ignoring 3D incorrectly conflates the effect of different 2D variables \cite{Chun2017-mm}.
-Beyond the 2D or 3D debate, five categories of important variables have been identified: Green space, water, landscape, albedo, and socio-economic \cite{Peng2018-cp}. 
+Beyond the 2D or 3D debate, important variables include green space, water bodies, albedo, and socio-economic factors \cite{Peng2018-cp}. 
 However, many studies do not capture these categories and, worse, many analyze only the single effect of each variable \cite{Zhao2017-cc, Merbitz2012-xz, Unger2004-ry} (see \cite{Peng2018-cp, Chun2017-mm} for further discussion). 
 Considering a variable in isolation, without accounting for potential conflating by other variables, limits the understanding of the interdependent effects that exist.
 
-The third potential enhancement is in the statistical approaches.
+The third potential enhancement is in the statistical models.
 Almost all studies use linear techniques (e.g. \cite{Li2017-yl, Peng2012-iy, Wicki2017-fv,Zhou2014-wc,Peng2018-cp,Echevarria_Icaza2016-fr,Chun2017-mm,Chun2018-so,Wang2019-tree,Wang2019-water}.
 Using linear models incur a number of major challenges that limit these studies' ability to explain the interdependencies between variables. 
 The first is that many of the urban characteristics exhibit high multicollinearity \cite{Zhou2014-wc}.
 The second is that linear models are limited in their ability to quantify the independent effects of characteristics and their relative influence on LST \cite{Peng2018-cp, Zhou2014-wc}.
-Additionally, and most importantly, these studies only assess their accuracy using in-sample validation techniques.
+
+Finally, and perhaps most importantly, the existing studies fail to appropriately validate their models.
+The approach they use to assess their accuracy is in-sample validation.
 In-sample validation means that model accuracy is assessed with the same data used in the training, rather than unseen data. 
 This risks overestimating the accuracy of their models.
 
 The question we address is: ``What is the relative importance and nonlinear affects of urban characteristics associated with land surface temperature during both the day and night?''
 To achieve this we conduct a comparative study of four cities in the United States using non-linear statistical techniques which capture the interdependencies and relative importance between the urban characteristics.
 In addressing our question, we will address the, at times fundamental, limitations of existing studies.
-Most importantly we look at nighttime temperature as well as daytime, we appropriately validate our statistical models, and we use tools that allow us to explore the interdependent effects of urban characteristics on urban heat.
+Most importantly we look at nighttime temperature as well as daytime, we appropriately validate our statistical models, and we use tools that allow us to explore the interdependent, nonlinear, effects of urban characteristics on urban heat.
 The results have implications for mitigating the severity of future heat waves.
 
 \section{Data and Methods}
@@ -245,8 +250,8 @@ To evaluate how multiple urban characteristics interact, partial dependence can 
 The swing \cite{Shortridge2015-ub} measures the relative importance of variables by calculating the magnitude of change in temperature associated with each variable.
 To calculate partial dependence, we need a data set and a statistical model.
 
-To analyze the data, it needs to transformed into a spatially consistent set.
-The raw data is a variety of spatial data types from area level (the population density data), to geostatistical raster (e.g. the land surface temperature).
+To analyze the data, it needs to be transformed into a suitable format that is consistent between the variables.
+The raw data is a variety of spatial data types from ``area level" (the population density data), to ``geostatistical raster" (e.g. the land surface temperature).
 We choose to resample the data into a grid of square cells.
 We conduct the resampling twice to produce a grid of 500m and 100 meter cells. 
 Having two grid resolutions allowed us to ensure our conclusions are robust.
@@ -260,18 +265,18 @@ This approach partitions 80\% of the data into a training set and the remaining 
 The model resulting from the training, is then tested on this unseen test set (known as out-of-bag), to get an estimate of the model accuracy.
 This is repeated 100 times and the distribution of the accuracy metric (here we use the mean absolute error (MAE) and variance explained (R$^2$)).
 Holdout cross-validation of this type is crucial for statistical analysis to ensure that models are not overfit to data \cite{Geron2017-ek}.
-Overfitting occurs when a model fits to the randomness in a dataset, causing it to not be suitable for generalizations. 
+Over fitting occurs when a model fits to the randomness in a dataset, causing it to be unsuitable for generalizations. 
 When models' accuracy metrics are reported based on in-sample data (the same data it was trained on), the accuracy metrics are high.
-This is essential for statistical models and overlooked by the majority of existing studies (e.g. \cite{Zhou2014-wc, Peng2018-cp, Chun2017-mm, Chun2018-so,Wang2019-tree}).
+Avoiding over fitting is therefore essential when working with statistical models and is overlooked by the majority of existing studies (e.g. \cite{Zhou2014-wc, Peng2018-cp, Chun2017-mm, Chun2018-so,Wang2019-tree}).
 Cross-validation helps to avoid this by evaluating the model on unseen data.
 
-A further way to avoid overfitting is to carefully consider how the test data is selected.
+A further way to avoid over fitting is to carefully consider how the test data is selected.
 This is especially important with spatial data.
 Therefore, when selecting the test and training data the grid cells were grouped into a larger 8x8 grid.
 This avoids over fitting of the model by training the model on a cell adjacent to a cell that is included in the test set.
 
 Finally, we attempt to capture uncertainty in the data and the models. 
-To represent the data uncertainty we conduct randomly sample from our data to create a new dataset.
+To represent the data uncertainty we draw a random sample from our data, with replacement, to simulate a new dataset.
 The models are trained on this new dataset and this is repeated.
 This approach, known as bootstrapping, means that the conclusions' sensitivity to the data can be assessed.
 If the results are vastly different for each bootstrap sample, we assume that the result is dependent on the data and is unlikely to be generalizable to other cities.
@@ -287,13 +292,13 @@ We fit a series of regression and data-mining models to the data and their predi
 
 \textit{Null model: average}. The first model, to compare other models against, is the null model. 
 This is a benchmark model to ensure the models we fit are not doing worse than no model.
-The mean, average, of the observations is calculated and is used as the prediction for the test observations.
+The mean of the observations in the training set is calculated and is used as the prediction for the test observations.
 
 \textit{Linear model}. Linear models are suitable when there is a linear relationship between the explanatory variables (urban characteristics) and the response variable (LST).
 
 \textit{Multivariate Adaptive Regression Spline (MARS)}. The MARS model extends the linear model, by using piece-wise functions to fit the data. \cite{Friedman1991-of}
 
-\textit{Generalized Additive Model (GAM)}. The GAM is also an extension of the linear model, although it does not require a linear relationship. Instead, the response variable is estimated as the sum of smoothing functions that are applied to each covariate \cite{Hastie1990-cg}.
+\textit{Generalized Additive Model (GAM)}. The GAM is also an extension of the linear model, although it does not require a linear relationship. Instead, the response variable is estimated as the sum of smoothing functions that are applied to each covariate or set of covariates \cite{Hastie1990-cg}.
 
 \textit{Random Forest}. A random forest is an ensemble model of \textit{Regression Trees}. 
 A regression tree partitions the data based on thresholds for the covariates \cite{Breiman1984-hw}. It continues to divide the data on different covariates until the partitions are as similar as possible. 
@@ -306,15 +311,27 @@ Tree-based models do not assume linearity and so are generally very flexible and
 However, the difference is that each tree is trained sequentially on the residuals of the previous tree.
 The result is the average of all of the regression trees \cite{Geron2017-ek}.
 
+\textit{Convolutional Neural Network}. 
+<add explanation>
+
 \section{Results and Discussion}
 In this study we seek to determine the influence and relative importance of urban characteristics on land surface temperature during both the day and night.
-To achieve this, the statistical models needed to be accurate.
+To achieve this, the statistical models need to be accurate.
 The results in Figure \ref{fig:holdout_500} indicate that both day and night land surface temperature can be predicted within 1$^o$C at night and 2$^o$C during the day using urban characteristics.
 The R$^2$ results, also based on unseen data, suggest that more than 80\% of the data variance is captured by the models for the mean LST during both night and day, while the mean \% variance explained is generally between 50 and 80\% for the maximum temperatures.
 Compared to models presented in similar studies, these are strong results, especially given that the existing studies failed to validate their models on unseen data.
 We find that the most accurate model is the random forest, closely followed by the gradient boosted regression trees.
 The weakest model is the linear regression, incidentally the one that is used in the majority of existing studies into land surface temperature.
 This strong result allows us to assess the influence and relative importance that these characteristics.
+
+\begin{figure*}
+    \begin{center}
+    \includegraphics[width=\linewidth]{fig/report/importance_500.png}
+    \caption[Variable influence on LST at 500 meter resolution]{
+    The variable influence, measured by swing, shows the relative importance of each urban characteristic on land surface temperature.}
+    \label{fig:importance_500}
+    \end{center}
+\end{figure*}
 
 \begin{figure*}
     \centering
@@ -333,7 +350,7 @@ This strong result allows us to assess the influence and relative importance tha
 
 Relative variable importance for all of the urban characteristics, calculated with \textit{swing}, is shown in Figure \ref{fig:importance_500}. 
 The characteristics, shown on the $y$ axis are ordered by the mean swing across all of the models, and the models are ordered left-to-right by their cross-validated accuracy.
-The most important characteristics during the night are tree canopy cover, greeness (nbdi), water, the sky view factor, and the elevation (digital surface model).
+The most important characteristics during the night are tree canopy cover, greeness (NDVI), water, the sky view factor, and the elevation (digital surface model).
 This is consistent for both the mean and maximum temperature during the night.
 It is also generally consistent between the models. 
 In contrast, during the day, albedo (surface whiteness) is more important and the sky view factor is less influential.
@@ -405,15 +422,6 @@ The partial dependence is similar to Figure \ref{fig:pdp_500}.
 Therefore these results are robust.
 
 \begin{figure*}
-    \begin{center}
-    \includegraphics[width=\linewidth]{fig/report/importance_500.png}
-    \caption[Variable influence on LST at 500 meter resolution]{
-    The variable influence, measured by swing, shows the relative importance of each urban characteristic on land surface temperature.}
-    \label{fig:importance_500}
-    \end{center}
-\end{figure*}
-
-\begin{figure*}
     \centering
     \includegraphics[width=\linewidth]{fig/report/pdp_2d_night_500.pdf}
     \caption{
@@ -434,7 +442,7 @@ Therefore these results are robust.
 
 
 \section{Conclusion}
-For the benefit of climate adaptation planning, we seek to determine how different urban characteristics are associated with land surface temperatures. 
+To assist planners tackling heat waves, climate change and high urban temperatures generally, we seek to determine how different urban characteristics are associated with land surface temperatures. 
 The results strongly support initiatives for increasing green infrastructure in cities \cite{Larsen2015-da, Meerow2017-xv}. 
 We found that increasing vegetation and reducing impervious surface area had the greatest effect on temperature during both night and day, with the potential to reduce the temperature up to 10$^o$C.
 We also see strong evidence for blue space and increasing the area of water, although there various limitations with doing so in cities such as Phoenix.
@@ -502,6 +510,11 @@ IPUMS NHGIS  & Area Level  & 2010 &
 \label{tab:data}
 \end{tabu}
 
+\newpage
+\section{Statistical Models}
+
+\lbrack Here I'll provide in-depth explanation of the statistical models used \rbrack
+
 
 \newpage
 \section{City specific results}
@@ -527,16 +540,16 @@ IPUMS NHGIS  & Area Level  & 2010 &
 \end{figure}
 
 
-\newpage
+\clearpage
 \section{100 meter resolution results}
 \label{ss:100_meter}
 The figures presented in the main text, are replicated here based on data at a 100 meter resolution.
+\\
+\lbrack Discuss the VIF results  \rbrack\\
+\lbrack Discuss the results of the variable influence - why is water not recognized  \rbrack
 
-Discuss the VIF results
-Discuss the results of the variable influence - why is water not recognized
 
-
-\begin{figure*}
+\begin{figure*}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/holdout_100.png}
     \caption[Holdout cross-validation results at 100 meter resolution]{
@@ -552,7 +565,7 @@ Discuss the results of the variable influence - why is water not recognized
 
 
 
-\begin{figure*}
+\begin{figure*}[h]
     \begin{center}
     \includegraphics[width=\linewidth]{fig/report/importance_100.png}
     \caption[Variable influence on LST at 100 meter resolution]{
@@ -562,7 +575,7 @@ Discuss the results of the variable influence - why is water not recognized
 \end{figure*}
 
 
-\begin{figure*}
+\begin{figure*}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/pdp_100.png}
     \caption[Partial dependence plots for LST at 100 meter resolution]{
@@ -576,7 +589,7 @@ Discuss the results of the variable influence - why is water not recognized
     \label{fig:pdp_100}
 \end{figure*}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/pdp_2d_night_100.pdf}
     \caption{
@@ -585,7 +598,7 @@ Discuss the results of the variable influence - why is water not recognized
     \label{fig:pdp_2dnight}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/pdp_2d_day_100.pdf}
     \caption{
@@ -595,16 +608,16 @@ Discuss the results of the variable influence - why is water not recognized
 \end{figure}
 
 
-\newpage
+\clearpage
 \section{Additional figures}
-\begin{figure}
+\begin{figure*}[h]
     \centering
     \includegraphics[width=\linewidth]{fig/report/imp_v_tree_500.png}
     \caption{
     Percentage tree canopy cover and impervious surface are 100\% correlated.
     }
     \label{fig:imp_tree}
-\end{figure}
+\end{figure*}
 
 
 \end{document}
