@@ -44,7 +44,8 @@ city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'
 model_names = {'rf':'random forest','mlr':'multivariate linear',
                 'gam':'generalized additive\n(gam)',
                 'gbrt':'gradient boosted\ntrees',
-                'mars':'multivariate adaptive\nspline (mars)'}
+                'mars':'multivariate adaptive\nspline (mars)',
+                'cnn':'convolutional\nneural network'}
 feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
                 'svf_mean':'sky view factor','dsm_mean':'digital surface model',
                 'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
@@ -420,10 +421,16 @@ def calculate_partial_dependence_city(df_full, grid_size, cities):
             ###
             # loop through features and their ranges
             ###
-            var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
-                            'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
-                            'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
-                            'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+            if grid_size == 500:
+                var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                                'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                                'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                                'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+            else:
+                var_interests = {'lst_day_mean':['tree_mean', 'ndvi_mean', 'alb_mean','dsm_mean','svf_mean'],
+                                'lst_night_mean':['tree_mean', 'ndvi_mean', 'alb_mean', 'svf_mean', 'dsm_mean'],
+                                'lst_day_max':['ndvi_mean','tree_mean','alb_mean','tree_sd','dsm_mean'],
+                                'lst_night_max':['tree_mean', 'ndvi_mean','tree_sd','svf_mean','alb_mean']}
             for var_interest in var_interests[h]: #['tree_mean','density_housesarea']:
                 # loop through range of var_interest
                 var_values = np.linspace(np.percentile(df[var_interest],2.5),np.percentile(df[var_interest],97.5), feature_resolution)
@@ -935,11 +942,14 @@ def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
+    loss = loss.sort_values(by='model')
     font_scale = 1.75
     with sns.plotting_context("paper", font_scale=font_scale):
         plt.figure(figsize=(width_2col, height_2c))
         g = sns.catplot(y="error", x="time_of_day", hue="model",
                         col = "error_metric", data=loss, sharey = False,
+                        col_order = ['r2','mae'],
+                        order = ['night\n(mean)','day\n(mean)','night\n(max)','day\n(max)'],
                         kind="box",
                         height = height_2c, aspect = aspect_2c,
                         legend = False)
@@ -950,7 +960,10 @@ def plot_holdouts(loss, grid_size):
                 ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
                 ax.set_xlabel('')
             elif i%2==0:
-                ax.set_ylim(0,1)
+                if grid_size == 100:
+                    ax.set_ylim(0.5,1)
+                else:
+                    ax.set_ylim(0,1)
                 ax.set_ylabel('out-of-bag R$^2$',size=font_size*1.5)
                 ax.set_xlabel('')
                 # plt.gca().invert_yaxis()
@@ -1024,12 +1037,14 @@ def plot_importance_max(df, grid_size):
                                 data=results_swing, kind='bar', col='model',
                                 order = feature_order,
                                 # row_order=['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max'],
-                                col_order=['random forest','gradient boosted\ntrees',
+                                col_order=['random forest',
+                                            'convolutional\nneural network',
+                                            'gradient boosted\ntrees',
                                             'multivariate adaptive\nspline (mars)',
                                             'generalized additive\n(gam)',
                                             'multivariate linear'],
                                 height = height_2c,
-                                aspect = 0.75,
+                                aspect = 0.60,
                                 # col_wrap = 3
                                 legend = False
                                 )
@@ -1109,10 +1124,16 @@ def plot_dependence_city(grid_size):
     # humanize the names
     pdp_results = pdp_results.replace(feature_names)
     pdp_results = pdp_results.replace(model_names)
-    var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
-                    'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
-                    'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
-                    'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+    if grid_size == 500:
+        var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                        'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                        'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                        'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+    else:
+        var_interests = {'lst_day_mean':['tree_mean', 'ndvi_mean', 'alb_mean','dsm_mean','svf_mean'],
+                        'lst_night_mean':['tree_mean', 'ndvi_mean', 'alb_mean', 'svf_mean', 'dsm_mean'],
+                        'lst_day_max':['ndvi_mean','tree_mean','alb_mean','tree_sd','dsm_mean'],
+                        'lst_night_max':['tree_mean', 'ndvi_mean','tree_sd','svf_mean','alb_mean']}
     # plot
     for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
         feature_order = var_interests[dep]
@@ -1239,7 +1260,7 @@ def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
         # different due to variables included
         features = [(1,4),(1,5),(0,4),(0,5),(2,4),(2,5)]
     else:
-        features = [(0,6),(0,8),(1,6),(1,8)]
+        features = [(0,6),(0,8),(1,6),(1,8),(2,6),(2,8)]
     # import data to unnormalize
     normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
     normalize_parameters = normalize_parameters.set_index('feature')
