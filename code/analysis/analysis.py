@@ -126,7 +126,7 @@ def regressions(df, cities, sim_num, grid_size, do_par = False):
             single_regression(df_city, response, grid_size, predict_quant, i)
 
 
-def single_regression(df_city, response, grid_size, predict_quant, i):
+def single_regression(df_city, response, grid_size, predict_quant):
     '''
     fit the different models for a single holdout
     '''
@@ -464,6 +464,34 @@ def calculate_partial_dependence_city(df_full, grid_size, cities):
                                                               # 'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
                 # save results
                 results_partial.to_csv('data/regression/city_{}/results_partial_dependence_{}.csv'.format(grid_size, grid_size))
+
+def in_sample_regression(df, grid_size, predict_quant):
+    '''
+    fit the different models for a single holdout
+    '''
+    city = 'insample'
+    # prepare the results of the holdout
+    loss = pd.DataFrame()
+    # prepare data for regression - no separate testing set
+    X_train, y_train = prepare_lst_prediction(df)
+    # drop unnecessary variables
+    X_train, X_test = subset_regression_data(X_train, X_train)
+    # response values
+    y = define_response_lst(y_train, y_train)
+    # null model
+    loss = regression_null(y, city, predict_quant, loss)
+    # GradientBoostingRegressor
+    loss = regression_gradientboost(X_train, y, X_train, city, predict_quant, loss)
+    # multiple linear regression
+    loss = regression_linear(X_train, y, X_train, city, predict_quant, loss)
+    # random forest regression
+    loss = regression_randomforest(X_train, y, X_train, city, predict_quant, loss)
+    # mars
+    loss = regression_mars(X_train, y, X_train, city, predict_quant, loss)
+    # gam
+    loss = regression_gam(X_train, y, X_train, city, predict_quant, loss)
+    # save results
+    loss.to_csv('data/regression/insample_results_{}.csv'.format(grid_size))
 
 
 ###
