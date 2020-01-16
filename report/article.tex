@@ -1,19 +1,22 @@
 % \documentclass[sort&compress]{elsarticle}
 % \documentclass[final,3p,times,onecolumn,sort&compress]{elsarticle}
-\documentclass[final,3p,times,twocolumn,sort&compress]{elsarticle}
-%\documentclass[review]{elsarticle}
+% \documentclass[final,3p,times,twocolumn,sort&compress]{elsarticle}
+\documentclass[review]{elsarticle}
 
 
-\usepackage{lineno,hyperref}
+\usepackage{lineno}
 \modulolinenumbers[2]
 
 \journal{Remote Sensing of Environment}
 
 %% Packages
+\PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
 \usepackage{tabu}
+\usepackage{booktabs}
 \usepackage{breakurl}
 \usepackage{float}
 \usepackage{amsmath}
+\usepackage{setspace}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -57,18 +60,18 @@
 \title{Night and day: What is the influence and relative importance of urban characteristics on land surface temperature?}
 
 %% or include affiliations in footnotes:
-\author[1]{T.M. Logan\corref{mycorrespondingauthor}}
-\cortext[mycorrespondingauthor]{Corresponding author}
+% \author[1]{T.M. Logan\corref{mycorrespondingauthor}}
+% \cortext[mycorrespondingauthor]{Corresponding author}
 % \ead[url]{www.tomlogan.co.nz}
-\ead{tom.logan@canterbury.ac.nz}
+% \ead{tom.logan@canterbury.ac.nz}
 
-\author[2]{B. Zaitchik}
-\author[1]{S. Guikema}
-\author[]{A. Nisbet}
-% \footnote{Beginning September 2019, T Logan will be a faculty member at the University of Canterbury, NZ}
+% \author[2]{B. Zaitchik}
+% \author[3]{S. Guikema}
+% \author[]{A. Nisbet}
 
-\address[1]{Industrial and Operations Engineering, University of Michigan, Ann Arbor, MI}
-\address[2]{Earth and Planetary Sciences, Johns Hopkins University, Baltimore, MD}
+% \address[1]{Civil and Natural Resources Engineering, University of Canterbury, New Zealand}
+% \address[2]{Earth and Planetary Sciences, Johns Hopkins University, Baltimore, MD}
+% \address[3]{Industrial and Operations Engineering, University of Michigan, Ann Arbor, MI}
 
 \begin{abstract}
 Heat waves are among the deadliest natural hazards and are expected to increase in frequency and severity under climate change. 
@@ -82,6 +85,7 @@ The effects from the daytime and nighttime analysis are compared to determine if
 Our results suggest that vegetation and impervious surfaces are the most important urban characteristics associated with land surface temperature.
 Increasing and decreasing these, respectively, is necessary for reducing high urban temperatures during both night and day.
 Our results also demonstrate the potential for using nonlinear statistical analysis to investigate land surface temperature and its relationships with urban characteristics. 
+For example, we can evaluate the compounding influence of two urban characteristics on the temperature.
 Improved understanding of these relationships influencing both night and day land surface temperature will assist planners undertaking climate change adaptation and heat wave mitigation.
 \end{abstract}
 
@@ -106,11 +110,11 @@ While LST is not a conventional meteorological variable, it is directly related 
 We analyze LST in this study.
 
 Most existing LST studies focus on the daytime \cite{Peng2018-cp,Chun2018-so,Wang2019-water,Zhou2018-iy}.
-However, the mechanisms and urban characteristics driving LST allegedly differs between night and day \cite{Hung2006-qy, Chun2017-mm, Nichol2005-mm, Wicki2017-fv, Echevarria_Icaza2016-fr,Sobstyl2018-wt, Peng2012-iy, Zhou2014-wc, Zhao2017-cc}. 
-Given that UHI is a nocturnal phenomena, the lack of study on nighttime LST leaves a critical gap in our understanding. 
+However, the mechanisms and urban characteristics driving LST allegedly differ between night and day \cite{Hung2006-qy, Chun2017-mm, Nichol2005-mm, Wicki2017-fv, Echevarria_Icaza2016-fr,Sobstyl2018-wt, Peng2012-iy, Zhou2014-wc, Zhao2017-cc}. 
+Given that UHI is primarily a nocturnal phenomena, the lack of study on nighttime LST leaves a critical gap in our understanding. 
 This can now be addressed as high resolution nighttime satellite images have become available.
 
-Existing studies that have analyzed LST have used low-resolution imagery, making it challenging to deduce a clear understanding of the influence and relative importance of the associated urban characteristics \cite{Chun2017-mm, Echevarria_Icaza2016-fr, Wicki2017-fv, Zhou2014-wc}. 
+Most existing studies that have analyzed LST, particularly nighttime LST, have used low-resolution imagery, making it challenging to deduce a clear understanding of the influence and relative importance of the associated urban characteristics \cite{Chun2017-mm, Echevarria_Icaza2016-fr, Wicki2017-fv, Zhou2014-wc}. 
 Additionally, these studies can be enhanced by: 1) studying multiple regions, 2) considering 2D and 3D urban characteristics, 3) diversifying their statistical models and relaxing their linear assumption, 4) rigorously testing and validating their models.
 The data availability has limited previous nocturnal studies, meaning that many rely on MODIS images with a 1km resolution \cite{Zhou2014-wc, Echevarria_Icaza2016-fr,Wang2019-tree,Peng2012-iy}.
 1km resolution makes it difficult to attribute LST to urban characteristics.
@@ -136,10 +140,11 @@ In-sample validation means that model accuracy is assessed with the same data us
 This risks overestimating the accuracy of their models.
 
 The question we address is: \textit{``What is the influence and relative importance of urban characteristics on land surface temperature, during both the day and night?''}
-To achieve this we conduct a comparative study of four cities in the United States using non-linear statistical techniques which capture the interdependencies and relative importance between the urban characteristics.
+To achieve this we conduct a comparative study of four cities in the United States using nonlinear statistical techniques which capture the interdependencies and relative importance between the urban characteristics.
 In addressing our question, we will address the, at times fundamental, limitations of existing studies.
 We look at nighttime temperature as well as daytime, we appropriately validate our statistical models, and we use tools that allow us to explore the interdependent, nonlinear, effects of urban characteristics on urban heat.
-The results have implications for mitigating the severity of future heat waves.
+While we do not claim causality, understanding the associations between urban characteristics on temperatures can complement and further inform our understanding of the processes that lead to high urban land surface temperature.
+The results therefore have implications for mitigating the severity of future heat waves.
 
 \section{Data and Methods}
 \subsection{Cities studied}
@@ -168,7 +173,7 @@ We calculate land surface temperature using Landsat 8 (Land Processes Distribute
 Our code is available on our Github\footnote{URL redacted for review} repository, and is as follows:
 We convert Band-10 digital-number data to top-of-atmosphere radiance \cite{Jimenez-Munoz2003-wc}. 
 We correct for emissivity using land cover data \cite{Alipour2003-ym}, and then calculate the at-satellite brightness temperature \cite{Jimenez-Munoz2003-wc}. 
-Finally, an atmospheric correction is made as per the monowindow algorithm \cite{Qin2001-jn} using the maximum observed temperature of the day from a nearby weather station. 
+Finally, an atmospheric correction is made as per the mono-window algorithm \cite{Qin2001-jn} using the maximum observed temperature of the day from a nearby weather station. 
 This follows the process is described in \cite{Scott2016-lc}. 
 
 To ameliorate the effect of ephemeral changes \cite{Zhou2018-iy} we use at least three minimal-cloud images for each city and night/day period and calculate the mean of LST.
@@ -237,19 +242,6 @@ The six reflective bands from Landsat 5 are used to calculate top-of-atmosphere 
 % * Rogan 2013, Elmes 2017
 
 \subsection{Data preparation and robustness}
-\begin{figure*}
-    \centering
-    \includegraphics[width=\linewidth]{fig/report/holdout_100.png}
-    \caption[Holdout cross-validation results at 100-meter resolution]{
-    Holdout cross-validation results at 100-meter resolution.
-    The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models from a 100-fold holdout cross-validation. 
-    The models were trained on 80\% of the data and tested on the unseen 20\%.
-    When selecting data for the training and testing sets, spatial subsets were used to account for spatial similarities. 
-    OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. 
-    Good models have MAE near 0.
-    }
-    \label{fig:holdout_100}
-\end{figure*}
 
 The objective of our study is to determine the most influential urban characteristics and understand how they relate to land surface temperature.
 To do this, we use partial dependence plots to understand how the urban characteristics are associated with land surface temperature.
@@ -300,6 +292,10 @@ The relationship between urban characteristics and land surface temperature is c
 This complexity may not be captured by a linear regression model. 
 We fit a series of regression and data-mining models to the data and their predictive accuracy and variable association are compared.
 
+It is important to note that we are assessing the association between the urban characteristics and the land surface temperature.
+These models are not explicitly evaluating causality. 
+Instead, we use these models to control for urban characteristics and evaluate how land surface temperature changes with changes in each of the other urban characteristic in turn.
+
 \textit{Null model: average}. The first model, to compare other models against, is the null model. 
 This is a benchmark model to ensure the models we fit are not doing worse than no model.
 The mean of the observations in the training set is calculated and is used as the prediction for the test observations.
@@ -309,8 +305,9 @@ That is, linear models take the form $$ y = \beta_0 + \sum_i \beta_i x_i + \vare
 
 \textit{Multivariate Adaptive Regression Spline (MARS)}. 
 MARS models are a type of non-parametric regression approach that are useful for high dimensional problems \cite{Hastie2009-ky}. 
-They extend the linear model by using piecewise functions to fit the data \cite{Friedman1991-of}. 
-Multiple linear approximations are summed across the variable space to construct an estimate of the  LST\cite{Friedman1991-of}. 
+They extend the linear model by using piecewise functions to fit the data \cite{Friedman1991-of}: $$ y = \sum_i c_i B_i(x)$$
+$B_i(x)$ is the basis function that includes multiple linear functions and indicator variables that set these functions to zero for certain ranges of $x$.
+That is, multiple linear approximations are summed across the variable range and provide a nonlinear estimate of the LST \cite{Friedman1991-of}. 
 
 \textit{Generalized Additive Model (GAM)}. 
 The GAM is also an extension of the linear model but relaxes the assumption that the relationship is linear \cite{Hastie1990-cg}.
@@ -339,18 +336,32 @@ CNN's are a new technique in deep learning and have most commonly been used to a
 Their use in image processing makes them potentially suitable for geographic studies.
 As with other forms of neural networks, CNN's contain layers of mathematical functions (neurons) that operate on the independent variables \cite{Geron2017-ek}.
 There can be multiple layers of these neurons that pass the results as an input to subsequent layers.
-In this manner, neural networks can capture non-linearities.
+In this manner, neural networks can capture nonlinearities.
 The advantage of convolutional neural networks above other types of neural networks is their ability to capture the spatial dependencies. 
 Because CNN's have seldom been used for geospatial data, we provide a more detailed explanation in (\ref{ss:cnn}).
 
 \section{Results and Discussion}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=\linewidth]{fig/report/holdout_100.png}
+    \caption[Holdout cross-validation results at 100-meter resolution]{
+    Holdout cross-validation results at 100-meter resolution.
+    The out-of-bag (OOB) R$^2$ and mean absolute error (MAE) of the models from a 100-fold holdout cross-validation. 
+    The models were trained on 80\% of the data and tested on the unseen 20\%.
+    When selecting data for the training and testing sets, spatial subsets were used to account for spatial similarities. 
+    OOB R$^2$ can vary between $(-\infty, 1)$, where better models have a value near 1. 
+    Good models have MAE near 0.
+    }
+    \label{fig:holdout_100}
+\end{figure*}
+
 In this study we seek to determine the influence and relative importance of urban characteristics on land surface temperature during both the day and night.
 To achieve this, we first select variables to remove based on collinearity. 
 The remaining variables for both 100 and 500-meter resolution analysis are shown in \ref{tab:vif}. 
 The next phase is to assess the accuracy of the statistical models.
 The results in Figure \ref{fig:holdout_100} show that the best models can predict both day and night land surface temperature to within 1$^o$C using urban characteristics.
 The R$^2$ results, also based on unseen data, suggest that more than 90\% of the data variance is captured by the best models.
-These are strong results.
 We find that the most accurate model is the random forest, closely followed by the gradient boosted regression trees and convolutional neural network.
 The weakest model, consistently with R$^2$ less than 80\%, is the linear regression - incidentally the model that is used in the majority of existing studies into land surface temperature.
 These results allow us to assess the influence and relative importance that these characteristics.
@@ -395,19 +406,19 @@ This, and the other influences can be examined using partial dependence.
 \textit{Vegetation and impervious surfaces}. 
 During the day, increasing impervious surfaces and decreasing vegetation causes increased sensible heat flux and lowered latent heat flux \cite{Voogt2003-mm, Peng2012-iy, Zhou2014-wc}.
 This is thought to be less important during the night because latent and sensible heat are dominant during the day, but ground heat flux dominates at night \cite{Zhou2014-wc, Voogt2003-mm}.
-However, because transpiration does not occur at night, vegetation's effect on night temperatures is debated. 
-In our study, percentage tree canopy and impervious surface cover must be discussed together because they are 100\% correlated (Figure \ref{fig:imp_tree}).
-To distinguish between vegetated surfaces and other pervious surfaces, we also include NDVI, a measure of a surface's greenness.
-At night, we find that \% tree canopy is the most influential characteristic on land surface temperature, followed by NDVI (Figure \ref{fig:pdp_100}).
-These partial dependence results indicate a decrease in up to 10$^oC$ as the percentage area of trees or other pervious surface increases.
+Indeed, because transpiration does not occur at night, vegetation's effect on night temperatures is debated. 
+In our study, percentage tree canopy and impervious surface cover must be discussed together because they are 100\% correlated in the data (Figure \ref{fig:imp_tree}).
+To distinguish between vegetated surfaces and other pervious surfaces, we include NDVI, a measure of a surface's greenness.
+At night, we find that \% tree canopy (and \% impervious surface) is the most influential characteristic on land surface temperature, followed by NDVI (Figure \ref{fig:importance_100}).
+The partial dependence results (Figure \ref{fig:pdp_100}) indicate a decrease in up to 10$^oC$ as the percentage area of trees or other pervious surface increases.
 This reduction in temperature could be due to a reduction in the impervious surfaces that store heat.
-However, we also observe that as the NDVI increases, the land surface temperature decreases.
-The two-dimension partial dependence (Figure \ref{fig:pdp_2dnight_100}) evaluates how LST varies with both characteristics.
-Figure \ref{fig:pdp_2dnight_100}d shows how the LST changes as both tree canopy/impervious surface and the NDVI change.
-The greener and more pervious a surface is, the cooler it is during the night. 
-The total change here is also approximately 7.5$^oC$, which is a considerable amount given these two-dimensional partial dependence are calculated using the random forest model, which is the less variable of the five models shown in Figure \ref{fig:pdp_100}.
+We also observe that as the NDVI increases, the land surface temperature decreases.
+
+To further evaluate whether the influence with temperature is due to vegetation or pervious surfaces, consider the the two-dimension partial dependence (Figure \ref{fig:pdp_2dnight_100}d) that evaluates how LST varies with \% tree canopy/impervious surface and the NDVI.
+The greener (higher NDVI) and more pervious (higher \% tree canopy cover) a surface is, the cooler it is during the night. 
+The total change here is also approximately 7.5$^oC$, which is a considerable amount given these two-dimensional partial dependence are calculated using the random forest model, which is the less sensitive of the five models (as seen in Figure \ref{fig:pdp_100}).
 These results contradict standing conclusions that vegetation has no effect on nighttime LST \cite{Peng2012-iy, Zhou2014-wc};
-rather, vegetation appears to be strongly associated with lower land surface temperatures during the night.
+although much of the reduction in temperature could be due to the perviousness of the surface, lowered temperatures appear to be associated with the greenness (NDVI) of a surface during the night.
 
 During the day, we again see that vegetation and impervious surfaces are associated with the greatest reduction in land surface temperature, with approximately 15$^oC$ change (Figure \ref{fig:pdp_2dday_100}: ndvi vs. \% tree canopy). 
 This daytime result is consistent with expectation \cite{Chun2017-mm, Peng2018-cp, Wang2019-tree,Zhou2014-wc, Chun2018-so}.
@@ -416,8 +427,7 @@ Because not all pervious surface types have the same cooling potential, and beca
 \textit{Water}.
 Water is widely expected to decrease the LST during the day \cite{Wicki2017-fv, Zhou2018-iy, Wang2019-water}, but some claim it increases LST during the night \cite{Chun2017-mm}.
 The rationale is that water releases heat during the night, resulting in elevated nighttime temperature \cite{Chun2017-mm}.
-However, while this is intuitive for air temperature, the effect on LST is not as apparent.
-Our findings show that water reduces the LST during both the day and night (Figure \ref{fig:pdp_500}).
+Our findings, however, show that water reduces the LST during both the day and night (Figure \ref{fig:pdp_500}).
 Although these results are not supported at the 100-meter resolution because 98\% of the data at the 100-meter level has zero percentage water.
 At the 500-meter resolution, we see that the presence of water can decrease LST between 1.5 and 8$^oC$ during the night and by substantially more during the day (Figure \ref{fig:pdp_500}).
 
@@ -436,18 +446,20 @@ The highest temperatures are observed when there is significant building area an
 This supports existing findings that albedo decreases LST during the day, however, that we find no strong effect during the night contrasts existing reports \cite{Peng2012-iy, Zhou2014-wc}.
 
 The built-up index (NDBI), \% building area, and digital surface elevation model also had relatively minor associations with LST.
-The building area had no effect during the night (Figure \ref{fig:pdp_100}a) and increased temperature during the day (Figure \ref{fig:pdp_100}c).
-The largest effect observed is that maximum NDBI is associated with maximum daytime LST (Figure \ref{fig:pdp_100}).
-This is surprising given that NDBI has been reported as among the most important urban characteristics during the day \cite{Peng2018-cp}.
-However, the discrepancy may be due to \% impervious surface area being incorporated already.
+The elevation (non-built-up) variable was excluded because it was found to be collinear with other variables; the digital surface elevation model was included and represents the elevation including buildings and vegetation.
+However, this elevation only appears to have minor associations with land surface temperature (Figure \ref{fig:pdp_100} \& \ref{fig:pdp_500}).
+The building area had no effect during the night and minorly increased temperature during the day (Figure \ref{fig:importance_100}).
+Maximum NDBI appears to have a slight positive associated with maximum daytime LST (Figure \ref{fig:pdp_500}), but this effect is not observed at the 100m resolution.
+This minor-to-negligible relationship is surprising given that NDBI has been reported as among the most important urban characteristics during the day \cite{Peng2018-cp}.
+However, the discrepancy may be due to \% impervious surface area being incorporated already with the \% tree canopy data.
 
 The canyon effect is also often attributed with causing warmer temperatures \cite{Chun2017-mm,Oke1988-re}.
 While there was high uncertainty in the models, it appears that during the night, the temperatures decrease as the sky view factor increased (Figure \ref{fig:pdp_100}a,b).
-This is potentially due to heat being stored within the canyons (areas with low, sky view factors).
+This is potentially due to heat being stored within the canyons (areas with low sky view factors).
 This is supported in the two-dimensional partial dependence plot (Figure \ref{fig:pdp_2dnight_100}) where the higher temperatures are observed when there is high \% building area and low sky view factor.
 It follows that heat is being captured in the canyons. 
 However, compared to the other urban characteristics this has a lesser affect, changing the temperature by approximately 1.5$^o$C.
-The effect of the sky view factor during the day is low-to-indiscernible (Figures \ref{fig:importance_100} and \ref{fig:pdp_2dday_100}), but suggests that there is higher temperatures when the sky view factor is high.
+The effect of the sky view factor during the day is low-to-indiscernible (Figures \ref{fig:importance_100} and \ref{fig:pdp_2dday_100}), but suggests that there are higher temperatures when the sky view factor is high.
 
 \textit{Population density}.
 We found that population density had no discernible effect during night or day (Figure \ref{fig:importance_100}).
@@ -458,6 +470,10 @@ The results are consistent.
 Additionally, to ensure that the effects are consistent between cities, we construct the partial dependence plots for each city (\ref{ss:city}).
 The partial dependence is similar to Figure \ref{fig:pdp_100}.
 Therefore, the consistency between 100 and 500-meter lends confidence to these conclusions.
+
+\textit{Urban strategies}.
+
+
 
 \begin{figure*}
     \centering
@@ -491,15 +507,21 @@ Nevertheless, LST is a highly relevant variable for analyses of the urban energy
 Our findings demonstrate that accurate prediction of land surface temperature using urban characteristics is possible.
 This result opens opportunities for further detailed analysis into potential interventions.
 Such interventions for mitigating high temperatures are naturally place-specific, and while these results have proven general to four different US cities, work is needed to understand questions such as which types of greenery are better than others \cite{Gober2009-im}.
-This study also demonstrates the opportunities of modern statistical techniques and the ability to assess potentially non-linear interactions and the interactions between multiple variables. 
-Another future step is conducting a thorough nonlinear statistical analysis that accounts for seasonality to ensure that interventions are effective year-round.
+This study also demonstrates the opportunities of modern statistical techniques and the ability to assess potentially nonlinear interactions and the interactions between multiple variables. 
 
 Rigorous statistical analysis can continue to answer on-going questions central to land surface temperature.
-For example, our results support the suggestion that 3D metrics do not outperform 2D ones \cite{Berger2017-lx}, however, iteratively removing these variables would address the potential for conflating the importance of different characteristics \cite{Chun2017-mm}.
+For example, our results support the suggestion that 3D variables (e.g. sky view factor) do not outperform 2D ones (e.g. \% tree canopy cover) \cite{Berger2017-lx}. 
+However, iteratively removing these variables from the analysis can ameliorate the potential for conflating the importance of different characteristics \cite{Chun2017-mm}.
+Our analysis is not causal inference; such an analysis would require controlled variables and urban spaces.
+We instead aim to complement and inform existing understanding of the relationships by demonstrating how land surface temperature and the urban characteristics are associated.
+This can be used to inform potential strategies for urban heat reduction, that is, if an association exists between two variables then we can evaluate the potential for causality based on understanding the physical mechanisms.
 
-Additionally, our results do not support claims advocating to constrain floor area ratios \cite{Chun2017-mm}.
+However, if no association exists or is in the opposite direction of proposed strategies for heat reduction, then such strategies need to be re-evaluated.
+For example, our results assessing the relative effect of sky view factor (a measure of building density), population, built-up index, and \% building area do not support claims advocating to constrain floor area ratios \cite{Chun2017-mm}.
 Such policy could lead to increased sprawl.
-If this type of action is explored, a further necessary study is to compare sprawling and dense cities, prior to taking steps to dissuade density. 
+Instead, our results show that reducing impervious area and increasing vegetation and greenness have a stronger association with lowered temperatures.
+Such action could be achieved without constraining floor area ratios.
+If a constraint is explored, an additional necessary study is to compare sprawling and dense cities, prior to taking steps to dissuade density. 
 Now that 100-meter resolution nighttime data is available, as well as the increasing availability of lidar data, studies advocating creative interventions such as increasing the vertical and horizontal randomness of buildings, increasing the prevalence of green roofs \cite{Gago2013-ta}, or other urban planning strategies can quantitatively be explored.
 
 This study into daytime and nighttime land surface temperature in four US cities has highlighted the importance of vegetation in our cities' mitigation options. 
@@ -512,9 +534,12 @@ Increasing and decreasing these, respectively, is necessary for reducing high ur
 
 % Here are two sample references: \cite{Feynman1963118,Dirac1953888}.
 \section*{Acknowledgements}
-This research was conducted with the support of the University of Michigan's Rackham PreDoctoral Fellowship, and the National Science Foundation's Grant SEES-1631409. This support is gratefully acknowledged.
+% TML conducted this research as a graduate student at the University of Michigan with the support of a Rackham PreDoctoral Fellowship.
+% The work was also supported by the US National Science Foundation's Grant SEES-1631409. 
+% This support is gratefully acknowledged.
 
 \section*{References}
+\singlespacing
 
 \bibliography{mybibfile.bib}
 
@@ -523,32 +548,39 @@ This research was conducted with the support of the University of Michigan's Rac
 \appendix
 
 \section{Data sources}
+The data sources for the analysis are listed in Table \ref{tab:data}.
 
+\begin{table}[H]
+\caption{The data sources for the LST analysis.}
+\label{tab:data}
+\fontsize{8}{11}\selectfont
 \begin{tabu}to \textwidth{ X[l]  X[c]  X[c] X[l] X[l] }
- \hline
- Data Provider & Data Type & Data Date & Description & URL \\
+\toprule
+ Data Provider & Data Type & Data Date & Description & Source \\
  \hline
 U.S. Geological Survey  & Raster  & 2013-2017 &
-    Landsat 8 day and night satellite imagery & \burl{https://earthexplorer.usgs.gov/} \\
+    Landsat 8 day and night satellite imagery & \url{https://earthexplorer.usgs.gov/} \\
 Microsoft  & Polygon  & 2018 & Building footprint polygons for the US &
-    \burl{https://github.com/Microsoft/USBuildingFootprints} \\
+    \url{https://github.com/Microsoft/USBuildingFootprints} \\
 Defense Meteorological Satellite Program  & Raster  & 2013 &
-    Stable nighttime light intensity & \burl{https://www.ngdc.noaa.gov/eog/dmsp/downloadV4composites.html} \\
+    Stable nighttime light intensity & \url{https://www.ngdc.noaa.gov/eog/dmsp/downloadV4composites.html} \\
 Multi-Resolution Land Characteristics Consortium  & Raster  & 2011 &
-    Land cover & \burl{https://www.mrlc.gov} \\
+    Land cover & \url{https://www.mrlc.gov} \\
 Multi-Resolution Land Characteristics Consortium  & Raster  & 2011 &
-    Percent developed imperviousness & \burl{https://viewer.nationalmap.gov} \\
+    Percent developed imperviousness & \url{https://viewer.nationalmap.gov} \\
 Multi-Resolution Land Characteristics Consortium  & Raster  & 2011 &
-    Percent tree canopy cover & \burl{https://viewer.nationalmap.gov} \\
+    Percent tree canopy cover & \url{https://viewer.nationalmap.gov} \\
 U.S. Geological Survey  & Raster  & 2015 & 1/3 arc-second elevation &
-    \burl{https://nationalmap.gov/3DEP/3dep_prodserv.html} \\
+    \url{https://nationalmap.gov/3DEP/3dep_prodserv.html} \\
 U.S. National Oceanic and Atmospheric Administration  & Lidar  & 2014 & Point cloud of surface elevation &
-    \burl{https://coast.noaa.gov/htdata/lidar2_z/geoid12b/data/6377/} \\
+    \url{https://coast.noaa.gov/htdata/lidar2_z/geoid12b/data/6377/} \\
 IPUMS NHGIS  & Area Level  & 2010 &
     Block-level population from the US census & \cite{nhgis}\\
-\hline
-\label{tab:data}
+\bottomrule
 \end{tabu}
+
+\end{table}
+
 
 \newpage
 \section{Covariates included in models}
@@ -558,10 +590,17 @@ This approach removes variables that exhibit high multicollinearity, that is the
 It is important to remove variables with high multicollinearity in inferential studies because otherwise the variables may confound the effect of one another on the variables of interest.
 
 
-\begin{tabu}to \textwidth{ lr }
- \hline
- Resolution & Included variable \\
- \hline
+
+\begin{table}[h]
+% \small
+% \fontsize{8}{11}\selectfont
+\centering
+\caption{Covariates included after accounting for multicollinearity.}
+\label{tab:vif}
+\begin{tabular}{p{0.23\linewidth} p{0.7\linewidth}}
+\toprule
+       \textbf{Resolution} & \textbf{Included variable} \\
+\midrule
 100-meter  & Albedo mean \\
 & NDVI mean \\
 & Sky view factor mean \\
@@ -589,9 +628,10 @@ It is important to remove variables with high multicollinearity in inferential s
 & Population density mean\\
 & Digital surface model mean \\
 & \% tree canopy min \\
-\hline
-\label{tab:vif}
-\end{tabu}
+\bottomrule
+\end{tabular}
+\end{table}
+
 
 \newpage
 \section{Technical appendix: convolutional neural network}
