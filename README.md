@@ -22,6 +22,7 @@ Understanding the factors influencing urban land surface temperature during the 
 ### 1. Raw data
 #### Nighttime Light Intensity
 This will be gridded with the nearest raster point.
+https://gis.stackexchange.com/questions/60527/how-to-extract-values-from-rasters-at-location-of-points-in-r
 
 ### 1. LandSat images to LST, albedo, and NDVI:
 
@@ -50,6 +51,7 @@ I selected the most recent four/five images per city and day/night where there w
   7. Impervious surface and tree canopy was downloaded from https://viewer.nationalmap.gov as well.
   8. The shapefile of the city was downloaded from [catalog.data.gov](https://catalog.data.gov/dataset?collection_package_id=89f89c6f-741c-4121-98e3-d3f1f528ff53) dataset of city boundaries (for Baltimore, the others were the shapesfiles from green space.)
   9. The elevation (m) 1/3 arc second as downloaded from the same as 6 and 7. In some cases it had to be unioned: https://support.esri.com/en/technical-article/000015258
+  or 1m? https://catalog.data.gov/dataset/usgs-national-elevation-dataset-ned-1-meter-downloadable-data-collection-from-the-national-map-
 
 #### 1.2 Metadata
   `data_source_satellite.csv` in `/data` provides information from each of the raw satellite images necessary for them to be processed. <br>
