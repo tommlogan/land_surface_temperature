@@ -103,7 +103,7 @@ def read_metadata(info_satellite):
     logger.info('Reading metadata')
     # metadata file and location
     fn_metadata = 'data/raw/{}/{}_MTL.txt'.format(info_satellite['city'],info_satellite['landsat_product_id'])
-
+    #
     # list of variables needed from metadata
     meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
     bands = [1,2,3,4,5,6,10]
@@ -111,7 +111,7 @@ def read_metadata(info_satellite):
     for rad in ['MULT', 'ADD']:
         for b in bands:
             meta_variables.add('RADIANCE_{}_BAND_{}'.format(rad, b))
-
+    #
     # init dictionary
     meta_dict = dict.fromkeys(meta_variables)
     # open the metadata file
@@ -127,7 +127,7 @@ def read_metadata(info_satellite):
                 var = list(var)[0]
                 # add to dictionary
                 meta_dict[var] = float(elements[-1])
-
+    #
     return meta_dict
 
 
@@ -146,7 +146,7 @@ def clip_geographic_data(info_satellite, source_city):
     # Define command
     command = 'Rscript'
     path2script = 'code/processing/clip_geographic_data.R'
-
+    #
     # Define arguments
     city = info_satellite['city']
     city_idx = source_city.loc[source_city['city']==city].index
@@ -160,10 +160,10 @@ def clip_geographic_data(info_satellite, source_city):
     bands = '1,2,3,4,5,6,10'
     # args into list - order does not matter, it is sorted at the bottom of the R script
     args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands, fn_tree_canopy, fn_impervious_surface, fn_elevation]
-
+    #
     # Build subprocess command
     cmd = [command, path2script] + args_clip
-
+    #
     # run the R function to clip and project the data as required
     x = subprocess.check_output(cmd, universal_newlines=True)
 
@@ -296,7 +296,7 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
     b_6 = 0.458606
     w = 1.6
     t_6 = 0.974290 - 0.08007*w
-    # variables dependent on land cover (emissivity) and temperature
+        # variables dependent on land cover (emissivity) and temperature
     c_6 = emissivity * t_6
     d_6 = (1 - t_6)*(1 + (1 - emissivity)*t_6)
     t_a = 16.0110 + 0.92621*temp_max
