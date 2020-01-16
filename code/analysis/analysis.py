@@ -5,24 +5,31 @@ thermal radiance from LandSat images of cities
 
 # import libraries
 import matplotlib as mpl
-mpl.use('Agg')
+# mpl.use('Agg')
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import brewer2mpl
+import joypy
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 import pickle
+import code
+from joblib import Parallel, delayed
 pd.options.mode.chained_assignment = 'raise'
+import itertools
+import glob
+from math import *
 
 # regression libraries
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble.partial_dependence import partial_dependence
 from sklearn.metrics import mean_squared_error, r2_score
-# from xgboost import XGBRegressor
+from pyearth import Earth
+from pygam import LinearGAM
 
 # init logging
 import sys
@@ -30,8 +37,26 @@ import sys
 # from logger_config import *
 # logger = logging.getLogger(__name__)
 
-
 RANDOM_SEED = 3201
+
+# other constants
+city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'}
+model_names = {'rf':'random forest','mlr':'multivariate linear',
+                'gam':'generalized additive\n(gam)',
+                'gbrt':'gradient boosted\ntrees',
+                'mars':'multivariate adaptive\nspline (mars)',
+                'cnn':'convolutional\nneural network'}
+feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
+                'svf_mean':'sky view factor','dsm_mean':'digital surface model',
+                'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
+                'tree_max':'max % tree can.','bldg':'% building area','pdens_mean':'pop. density',
+                'tree_min':'min % tree can.','svf_max':'max sky view factor',
+                'tree_sd': '% tree can. stand. dev.', 'nbdi_sd_sl':'nbdi surrounding stand. dev.',
+                'tree_sd_sl':'% tree can. surrounding stand. dev.',
+                'ndvi_sd': 'ndvi stand. dev'
+                }
+
+CORES_NUM = min(50,int(os.cpu_count()*3/4))
 
 def main():
     '''
@@ -39,13 +64,10 @@ def main():
     # loop cities and all
     cities = ['bal', 'por', 'det', 'phx']
     # import data
-    df = import_data(cities)
-
-    # data transformations
-    df = transform_data(df)
+    df = import_data(cities, grid_size)
 
     # present the data - density plot
-    plot_density(df, cities)
+    # plot_density(df, cities)
 
     # regression
     ## train on three cities, test on one
@@ -54,12 +76,12 @@ def main():
     plot_holdout_points(loss)
 
     ## for each city, train and test
-    sim_num = 100 # number of holdouts
+    sim_num = 50 # number of holdouts
     regressions(df, cities, sim_num)
     plot_holdouts()
 
     # variable importance and partial dependence
-    reg_gbm = full_gbm_regression(df, cities)
+    # reg_gbm = full_gbm_regression(df, cities)
 
     # variable selection
     loop_variable_selection(df, cities)
@@ -77,119 +99,61 @@ def main():
     # # # plot the partial dependence
     # plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False)
 
-def import_data(cities):
-    df = pd.DataFrame()
-    for city in cities:
-        # import city data
-        df_new = pd.read_csv('data/processed/grid/{}/2018-04-14/{}_data.csv'.format(city,city))
-        # append city name to df
-        df_new['city'] = city
-        # bind to complete df
-        df = df.append(df_new, ignore_index=True)
+def import_data(grid_size, selected_vars = True):
+    if selected_vars:
+        df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
+        df = df.drop('Unnamed: 0', axis=1)
+    else:
+        df = pd.read_csv('data/data_regressions_{}_20190419.csv'.format(grid_size))
+        df = df.drop('Unnamed: 0', axis=1)
     return(df)
 
-def transform_data(df):
-    '''
-    apply a couple of transformations to the data
-    '''
 
-    # Remove the lat, long, name, cId columns and area == 0 rows
-    df = df.drop(['Unnamed: 0', 'x', 'y', 'cId'], axis = 1)
-
-    ##
-    # Land cover
-    ##
-
-    # drop lcov 0 column
-    df = df.drop(['lcov_0','lcov_0_sl'], axis=1)
-
-    # list of the variables
-    vars_all = df.columns.values
-    # which columns have an lcov values in them?
-    vars_lcov = [i for i in vars_all if 'lcov' in i]
-
-    # set other nan landcover values to 0
-    df[vars_lcov] = df[vars_lcov].fillna(0)
-
-    # make the land cover variables a percentage , rather than the total m2.
-    # calculate the max area of a cell
-    area_max = np.max([np.max(df[i]) for i in vars_lcov])
-    # divide these values by the area value
-    df = df[df['area'] > 0]
-    for var_lcov in vars_lcov:
-        df[var_lcov] = df[var_lcov]/area_max
-
-    # drop rows with water more than 20% of area
-    df = df.loc[df['lcov_11'] < 0.2]
-
-    # Drop the 2013 thermal radiance measure (this is in bal dataset for validation)
-    tr_2013 = [s for s in df.columns.values if 'tr_2013' in s]
-    df = df.drop(tr_2013, axis=1)
-
-    # drop columns which are all nan
-    df = df.dropna(axis=1, how='all')
-    # drop any nan rows and report how many dropped
-    df = df.dropna(axis=0, how='any')
-
-    # scale albedo
-    vars_alb = [i for i in vars_all if 'alb' in i]
-    alb_min = df[vars_alb].values.min()
-    alb_max = df[vars_alb].values.max()
-    df.loc[:,vars_alb] = (df[vars_alb]-alb_min)/(alb_max-alb_min)
-
-    # make tree values a percentage
-    vars_tree = [i for i in vars_all if 'tree' in i]
-    df.loc[:,vars_tree] = df[vars_tree]/100
-
-    ###
-    # elevation transform and scale
-    ###
-    vars_elev = [i for i in vars_all if 'elev' in i]
-    cities = np.unique(df['city'])
-    # subtract city median elevation
-    medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
-    for city in cities:
-        df.loc[df['city']==city,vars_elev] = df.loc[df['city']==city,vars_elev] - medians[city]
-    # scale the cities
-    elev_max = np.max(df[vars_elev].values.max())
-    elev_min = np.min(df[vars_elev].values.min())
-    df.loc[:,vars_elev] = (df.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-
-    return(df)
-
-def regressions(df, cities, sim_num):
+def regressions(df, cities, sim_num, grid_size, do_par = False):
     '''
     to compare regression out-of-bag accuracy I need to split into test and train
     I also want to scale some of the variables
     '''
-
-    # prep y
-    loss = pd.DataFrame()
-    for city in cities:
-        df_city = df[df['city']==city] #df_city = df.loc[df['city']==city]
-        predict_quant = 'lst'
-        df_city, response = prepare_lst_prediction(df_city)
-        # conduct the holdout
+    # for city in cities:
+    df_city = df#[df['city']==city] #df_city = df.loc[df['city']==city]
+    predict_quant = 'lst'
+    df_city, response = prepare_lst_prediction(df_city)
+    # conduct the holdout
+    if do_par:
+        Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(sim_num))
+    else:
         for i in range(sim_num):
-            # divide into test and training sets
-            X_train, X_test, y_train, y_test = train_test_split(df_city, response, test_size=0.2)#, random_state=RANDOM_SEED)
-            # scale explanatory variables
-            X_train, X_test = scale_X(X_train, X_test)
-            # response values
-            y = define_response_lst(y_train, y_test)
-            # import code
-            # code.interact(local=locals())
-            # apply the null model
-            loss_null = regression_null(y, city, predict_quant)
-            # now the GradientBoostingRegressor
-            loss_gbm = regression_gradientboost(X_train, y, X_test, city, predict_quant)
-            # finally, multiple linear regression
-            loss_mlr = regression_linear(X_train, y, X_test, city, predict_quant)
-            # join the loss functions
-            loss_city = pd.concat([loss_null, loss_mlr, loss_gbm])
-            # print(loss_city)
-            loss = loss.append(loss_city)
-    loss.to_csv('data/regression/holdout_results.csv')
+            single_regression(df_city, response, grid_size, predict_quant, i)
+
+
+def single_regression(df_city, response, grid_size, predict_quant):
+    '''
+    fit the different models for a single holdout
+    '''
+    city = str(i)
+    # prepare the results of the holdout
+    loss = pd.DataFrame()
+    # divide into test and training sets
+    X_train, X_test, y_train, y_test = split_holdout(df_city, response, test_size=0.20)#, random_state=RANDOM_SEED)
+    # drop unnecessary variables
+    X_train, X_test = subset_regression_data(X_train, X_test)
+    # response values
+    y = define_response_lst(y_train, y_test)
+    # null model
+    loss = regression_null(y, city, predict_quant, loss)
+    # GradientBoostingRegressor
+    loss = regression_gradientboost(X_train, y, X_test, city, predict_quant, loss)
+    # multiple linear regression
+    loss = regression_linear(X_train, y, X_test, city, predict_quant, loss)
+    # random forest regression
+    loss = regression_randomforest(X_train, y, X_test, city, predict_quant, loss)
+    # mars
+    loss = regression_mars(X_train, y, X_test, city, predict_quant, loss)
+    # gam
+    loss = regression_gam(X_train, y, X_test, city, predict_quant, loss)
+    # save results
+    loss.to_csv('data/regression/holdout_{}/holdout{}_results_{}.csv'.format(grid_size, i, grid_size))
+
 
 def regression_cityholdouts(df, cities):
     '''
@@ -197,59 +161,38 @@ def regression_cityholdouts(df, cities):
     I also want to scale some of the variables
     '''
     predict_quant = 'lst'
-    # normalize y
-    df = normalize_response(cities, df, predict_quant)
+
     # prep y
     df, response = prepare_lst_prediction(df)
     loss = pd.DataFrame()
     for city in cities:
         train_idx = np.where(df['city'] != city)
         test_idx = np.where(df['city'] == city)
-        # import code
-        # code.interact(local=locals())
         # divide into test and training sets
         X_train = df.iloc[train_idx].copy()
         y_train = response.iloc[train_idx].copy()
         X_test = df.iloc[test_idx].copy()
         y_test = response.iloc[test_idx].copy()
-        # scale explanatory variables
-        X_train, X_test = scale_X(X_train, X_test)
+        # drop unnecessary variables
+        X_train, X_test = subset_regression_data(X_train, X_test)
         # response values
         y = define_response_lst(y_train, y_test)
-
+        ### do the holdouts
         city = 'hold-{}'.format(city)
-        # apply the null model
-        loss_null = regression_null(y, city, predict_quant)
-        # now the GradientBoostingRegressor
-        loss_gbm = regression_gradientboost(X_train, y, X_test, city, predict_quant)
-        # finally, multiple linear regression
-        loss_mlr = regression_linear(X_train, y, X_test, city, predict_quant)
-        # join the loss functions
-        loss_city = pd.concat([loss_null, loss_mlr, loss_gbm])
-        # print(loss_city)
-        loss = loss.append(loss_city)
+        # null model
+        loss = regression_null(y, city, predict_quant, loss)
+        # GradientBoostingRegressor
+        loss = regression_gradientboost(X_train, y, X_test, city, predict_quant, loss)
+        # multiple linear regression
+        loss = regression_linear(X_train, y, X_test, city, predict_quant, loss)
+        # random forest regression
+        loss = regression_randomforest(X_train, y, X_test, city, predict_quant, loss)
+        # mars
+        loss = regression_mars(X_train, y, X_test, city, predict_quant, loss)
+        # gam
+        loss = regression_gam(X_train, y, X_test, city, predict_quant, loss)
     return(loss)
 
-def prepare_tr_prediction(df):
-    '''
-    to predict for thermal radiance, let's remove land surface temp and superfluous
-    thermal radiance values
-    '''
-    lst_mean = df[['lst_day_mean_mean','lst_night_mean_mean', 'lst_day_mean_min', 'lst_day_mean_max', 'lst_night_mean_min', 'lst_night_mean_max']]
-    lst_vars = ['lst_day_mean_mean','lst_night_mean_mean', 'lst_day_mean_min', 'lst_day_mean_max', 'lst_night_mean_min', 'lst_night_mean_max']
-    lst_vars_sl = [var + '_sl' for var in lst_vars]
-    df = df.drop(lst_vars, axis=1)
-    df = df.drop(lst_vars_sl, axis=1)
-
-    # drop additional thermal radiance variables
-    thermrad_vars = ['tr_day_mean','tr_nght_mean', 'tr_day_min', 'tr_nght_min', 'tr_day_max', 'tr_nght_max']
-    thermrad_mean = df[thermrad_vars]
-
-    thermrad_vars_sl = [var + '_sl' for var in thermrad_vars]
-    df = df.drop(thermrad_vars, axis=1)
-    df = df.drop(thermrad_vars_sl, axis=1)
-
-    return(df, thermrad_mean)
 
 def prepare_lst_prediction(df):
     '''
@@ -257,236 +200,490 @@ def prepare_lst_prediction(df):
     thermal radiance values
     '''
     # drop lst
-    lst_vars = ['lst_day_mean_mean','lst_night_mean_mean', 'lst_day_mean_min', 'lst_day_mean_max', 'lst_night_mean_min', 'lst_night_mean_max']
-    lst_mean = df[lst_vars]
-    lst_vars_sl = [var + '_sl' for var in lst_vars]
+    lst_vars = ['lst_day_mean','lst_night_mean','lst_night_max','lst_day_max']
+    lst_mean = df[lst_vars].copy()
     df = df.drop(lst_vars, axis=1)
-    df = df.drop(lst_vars_sl, axis=1)
-
-    # drop additional thermal radiance variables
-    thermrad_vars = ['tr_day_mean','tr_nght_mean', 'tr_day_min', 'tr_nght_min', 'tr_day_max', 'tr_nght_max']
-    thermrad_mean = df[thermrad_vars]
-    thermrad_vars_sl = [var + '_sl' for var in thermrad_vars]
-    df = df.drop(thermrad_vars, axis=1)
-    df = df.drop(thermrad_vars_sl, axis=1)
-
-    # drop lcov variables
-    vars_lcov = [i for i in df.columns.values if 'lcov' in i]
-    # keep water (lcov_11)
-    vars_lcov = [i for i in vars_lcov if '11' not in i]
-    df = df.drop(vars_lcov, axis=1)
-
-    # drop impervious variables because they are 1:1 correlated with tree canopy
-    vars_imp = [i for i in df.columns.values if 'imp' in i]
-    df = df.drop(vars_imp, axis=1)
 
     return(df, lst_mean)
 
-def scale_X(X_train, X_test):
+
+def subset_regression_data(X_train, X_test):
     '''
-    scale the variables so they are more suited for regression
+    drop unnecessary variables
     '''
     vars_all = X_train.columns.values
     cities = np.unique(X_train['city'])
 
-    # scaler = preprocessing.MinMaxScaler()
-    # scaler.fit(X_train)
-    # X_scaled = scaler.transform(X_train)
-    # X_train = pd.DataFrame(data = X_scaled, columns = X_train.columns.values)
-    # X_test = pd.DataFrame(data = scaler.transform(X_test), columns = X_test.columns.values)
-    # vars_elev = [i for i in vars_all if 'elev' in i]
-    # if len(vars_elev)>0:
-    #     # print(cities)
-    #     # print(len(cities))
-    #     if len(cities) > 1:
-    #         # normalize elevation by subtracting median of city from the city
-    #         df = pd.concat([X_train, X_test])
-    #         medians = df.groupby(df.city)[vars_elev].median().median(axis=1)
-    #         for city in cities:
-    #             X_train.loc[X_train['city']==city,vars_elev] = X_train.loc[X_train['city']==city,vars_elev] - medians[city]
-    #             X_test.loc[X_test['city']==city,vars_elev] = X_test.loc[X_test['city']==city,vars_elev] - medians[city]
-    #
-    #     X_train = X_train.drop('city', axis=1)
-    #     X_test = X_test.drop('city', axis=1)
-    #
-    #     if len(X_test[vars_elev].values) > 0:
-    #         elev_max = np.max([X_train[vars_elev].values.max(), X_test[vars_elev].values.max()])
-    #         elev_min = np.min([X_train[vars_elev].values.min(), X_test[vars_elev].values.min()])
-    #         X_test.loc[:,vars_elev] = (X_test.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-    #     else:
-    #         elev_max = X_train[vars_elev].values.max()
-    #         elev_min = X_train[vars_elev].values.min()
-    #     # print(elev_max, elev_min)
-    #     X_train.loc[:,vars_elev] = (X_train.loc[:,vars_elev] - elev_min)/(elev_max-elev_min)
-    # else:
-    X_train = X_train.drop('city', axis=1)
-    X_test = X_test.drop('city', axis=1)
+    # drop the following variables
+    vars_drop = ['city','holdout','x','y']
+    X_train = X_train.drop(vars_drop, axis=1)
+    X_test = X_test.drop(vars_drop, axis=1)
 
     return(X_train, X_test)
 
-def define_response_tr(y_train, y_test):
-    y = {}
-    y['day_train'] = y_train['tr_day_mean']
-    y['night_train'] = y_train['tr_nght_mean']
-    # test
-    y['day_test'] = y_test['tr_day_mean']
-    y['night_test'] = y_test['tr_nght_mean']
-    return(y)
 
 def define_response_lst(y_train, y_test):
     y = {}
-    y['day_train'] = y_train['lst_day_mean_mean']
-    y['night_train'] = y_train['lst_night_mean_mean']
+    y['day_train'] = y_train['lst_day_mean']
+    y['night_train'] = y_train['lst_night_mean']
+    y['nightmax_train'] = y_train['lst_night_max']
+    y['daymax_train'] = y_train['lst_day_max']
     # test
-    y['day_test'] = y_test['lst_day_mean_mean']
-    y['night_test'] = y_test['lst_night_mean_mean']
+    y['day_test'] = y_test['lst_day_mean']
+    y['night_test'] = y_test['lst_night_mean']
+    y['nightmax_test'] = y_test['lst_night_max']
+    y['daymax_test'] = y_test['lst_day_max']
     return(y)
 
-def normalize_response(cities, df, predict_quant):
+
+def calculate_partial_dependence(df, grid_size, boot_index = None):
     '''
-    normalize the response data so it can be predicted between cities
+    fit the models to the entire dataset
+    loop through each feature
+    vary the feature over its range
+    predict the target variable to see how it is influenced by the feature
     '''
-    # identify keys
-    if predict_quant=='lst':
-        vars = ['lst_day_mean_mean','lst_night_mean_mean', 'lst_day_mean_min', 'lst_day_mean_max', 'lst_night_mean_min', 'lst_night_mean_max']
+    results_partial = pd.DataFrame()
+    df, target = prepare_lst_prediction(df)
+    df  = subset_regression_data(df, df)[0]
+    df_reference = df.copy()
+    feature_resolution = 25
+    # loop day and night
+    for h in ['lst_day_mean', 'lst_night_mean', 'lst_night_max','lst_day_max']:
+        print(h)
+        ###
+        # fit models
+        ###
+        # gradient boosted tree
+        gbm = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+        gbm.fit(df, target[h])
+        # random forest
+        rf = RandomForestRegressor(random_state=RANDOM_SEED, n_estimators=500, max_features=1/3)
+        rf.fit(df, target[h])
+        # mars
+        mars = Earth(max_degree=1, penalty=1.0, endspan=5)
+        mars.fit(df, target[h])
+        # GAM
+        gam = LinearGAM(n_splines=10).fit(df, target[h])
+        # linear
+        mlr = LinearRegression()
+        mlr = mlr.fit(df, target[h])
+        ###
+        # loop through features and their ranges
+        ###
+        for var_interest in list(df): #['tree_mean','density_housesarea']:
+            # loop through range of var_interest
+            var_values = np.linspace(np.percentile(df[var_interest],2.5),np.percentile(df[var_interest],97.5), feature_resolution)
+            df_change = df.copy()
+            for x in var_values:
+                df_change[var_interest] = x
+                # gbm
+                pred = gbm.predict(df_change)
+                # save results
+                results_partial = results_partial.append({'model': 'gbrt', 'dependent':h,'independent':var_interest,
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # rf
+                pred = rf.predict(df_change)
+                # save results
+                results_partial = results_partial.append({'model': 'rf', 'dependent':h,'independent':var_interest,
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # mars
+                pred = mars.predict(df_change)
+                # save results
+                results_partial = results_partial.append({'model': 'mars', 'dependent':h,'independent':var_interest,
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # gam
+                pred = gam.predict(df_change)
+                # save results
+                results_partial = results_partial.append({'model': 'gam', 'dependent':h,'independent':var_interest,
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # mlr
+                pred = mlr.predict(df_change)
+                # save results
+                results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
+                                                          'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+            # save results
+            if boot_index:
+                results_partial.to_csv('data/regression/bootstrap_{}/results_partial_dependence_{}.csv'.format(grid_size,boot_index))
+            else:
+                results_partial.to_csv('data/regression/results_partial_dependence_{}.csv'.format(grid_size))
+
+
+def calc_swing(results_pd, grid_size):
+    '''
+    calculate the variable importance (swing)
+    input: the results of the partial dependence
+    now calculate the maximum change of the target for each feature
+    the result is the swing, a measure of variable importance
+    '''
+    features = np.unique(results_pd['independent'])
+    targets = np.unique(results_pd['dependent'])
+    models = np.unique(results_pd['model'])
+    # init df
+    results_swing = pd.DataFrame()
+    # loop targets
+    for h in targets:
+        # loop models
+        for m in models:
+            # calculate the range of the target for each feature
+            model_range = results_pd.loc[(results_pd['dependent']==h) & (results_pd['model']==m)].groupby(['independent']).agg(np.ptp)
+            # calc sum of range
+            range_sum = model_range['mean'].sum()
+            # calc swing
+            swing = model_range['mean']/range_sum
+            # put into dataframe
+            swing = swing.to_frame('swing').reset_index()
+            swing['model'] = m
+            swing['dependent'] = h
+            swing['raw'] = model_range['mean'].values
+            # save
+            results_swing = results_swing.append(swing, ignore_index=True)
+        # save results
+        results_swing.to_csv('data/regression/results_swing_{}.csv'.format(grid_size))
+
+
+def bootstrap_main(df, grid_size, boot_num, do_par = False):
+    '''
+    loop the bootstraps to calculate the partial_dependence
+    '''
+    if do_par:
+        Parallel(n_jobs=CORES_NUM)(delayed(boot_pd)(df, grid_size, boot_index) for boot_index in range(boot_num))
     else:
-        vars = ['tr_day_mean','tr_nght_mean', 'tr_day_min', 'tr_nght_min', 'tr_day_max', 'tr_nght_max']
+        for boot_index in range(boot_num):
+            boot_pd(df, grid_size, boot_index)
+    # import the data
+    path = 'data/regression/bootstrap_{}'.format(grid_size)
+    all_files = glob.glob(os.path.join(path, "*.csv"))
+    df_from_each_file = (pd.read_csv(f) for f in all_files)
+    results_pd = pd.concat(df_from_each_file, ignore_index=True)
+    # undo the normalization
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+    for index, row in results_pd.iterrows():
+        feature = row.independent
+        results_pd.loc[index,'x'] = row['x']*normalize_parameters.loc[feature,'sd'] + normalize_parameters.loc[feature,'mean']
 
-    # loop keys
-    for k in vars:
-        # loop through the cities
-        for city in cities:
-            # calculate the mean
-            k_mean = np.mean(df.loc[df['city']==city,k])
-            # calculate the sd
-            k_std = np.std(df.loc[df['city']==city,k])
-            # normalize the data
-            df.loc[df['city']==city,k] = df.loc[df['city']==city,k] - k_mean
-    return(df)
+    # save results
+    results_pd.to_csv('data/regression/results_partial_dependents_{}.csv'.format(grid_size))
 
-def regression_null(y, city, predict_quant):
+
+def boot_pd(df, grid_size, boot_index):
+    '''
+    sample the holdout numbers with replacement to create bootstrapped df
+    fit the models and calculate the partial dependence
+    '''
+    # resample the holdout numbers
+    holdout_numbers = np.unique(df.holdout)
+    holdout_sample = np.random.choice(holdout_numbers, len(holdout_numbers), replace=True)
+    # create the df based on this sample
+    sample_index = [list(df[df.holdout == x].index) for x in holdout_sample]
+    sample_index = list(itertools.chain.from_iterable(sample_index))
+    df = df.loc[sample_index]
+    # calculate the pd
+    calculate_partial_dependence(df, grid_size, boot_index)
+
+
+def calculate_partial_dependence_city(df_full, grid_size, cities):
+    '''
+    fit the models to the entire dataset
+    loop through each feature
+    vary the feature over its range
+    predict the target variable to see how it is influenced by the feature
+    '''
+    results_partial = pd.DataFrame()
+    for city in cities:
+        print(city)
+        df = df_full[df_full.city == city]
+        df, target = prepare_lst_prediction(df)
+        df = subset_regression_data(df, df)[0]
+        df_reference = df.copy()
+        feature_resolution = 25
+        # loop day and night
+        for h in ['lst_day_mean', 'lst_night_mean', 'lst_night_max','lst_day_max']:
+            print(h)
+            ###
+            # fit models
+            ###
+            # gradient boosted tree
+            # gbm = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+            # gbm.fit(df, target[h])
+            # random forest
+            rf = RandomForestRegressor(random_state=RANDOM_SEED, n_estimators=500, max_features=1/3)
+            rf.fit(df, target[h])
+            # mars
+            # mars = Earth(max_degree=1, penalty=1.0, endspan=5)
+            # mars.fit(df, target[h])
+            # GAM
+            # gam = LinearGAM(n_splines=10).fit(df, target[h])
+            # linear
+            # mlr = LinearRegression()
+            # mlr = mlr.fit(df, target[h])
+            ###
+            # loop through features and their ranges
+            ###
+            if grid_size == 500:
+                var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                                'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                                'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                                'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+            else:
+                var_interests = {'lst_day_mean':['tree_mean', 'ndvi_mean', 'alb_mean','dsm_mean','svf_mean'],
+                                'lst_night_mean':['tree_mean', 'ndvi_mean', 'alb_mean', 'svf_mean', 'dsm_mean'],
+                                'lst_day_max':['ndvi_mean','tree_mean','alb_mean','tree_sd','dsm_mean'],
+                                'lst_night_max':['tree_mean', 'ndvi_mean','tree_sd','svf_mean','alb_mean']}
+            for var_interest in var_interests[h]: #['tree_mean','density_housesarea']:
+                # loop through range of var_interest
+                var_values = np.linspace(np.percentile(df[var_interest],2.5),np.percentile(df[var_interest],97.5), feature_resolution)
+                df_change = df.copy()
+                for x in var_values:
+                    df_change[var_interest] = x
+                    # gbm
+                    # pred = gbm.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'gbrt', 'dependent':h,'independent':var_interest,
+                                                              # 'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # rf
+                    pred = rf.predict(df_change)
+                    # save results
+                    results_partial = results_partial.append({'model': 'rf', 'dependent':h,'independent':var_interest,
+                                                              'x':x, 'mean':np.mean(pred), 'city': city}, ignore_index=True)
+                    # mars
+                    # pred = mars.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'mars', 'dependent':h,'independent':var_interest,
+                    #                                           'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # # gam
+                    # pred = gam.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'gam', 'dependent':h,'independent':var_interest,
+                    #                                           'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                    # # mlr
+                    # pred = mlr.predict(df_change)
+                    # # save results
+                    # results_partial = results_partial.append({'model': 'mlr', 'dependent':h,'independent':var_interest,
+                                                              # 'x':x, 'mean':np.mean(pred), 'boot': boot_index}, ignore_index=True)
+                # save results
+                results_partial.to_csv('data/regression/city_{}/results_partial_dependence_{}.csv'.format(grid_size, grid_size))
+
+def in_sample_regression(df, grid_size, predict_quant):
+    '''
+    fit the different models for a single holdout
+    '''
+    city = 'insample'
+    # prepare the results of the holdout
+    loss = pd.DataFrame()
+    # prepare data for regression - no separate testing set
+    X_train, y_train = prepare_lst_prediction(df)
+    # drop unnecessary variables
+    X_train, X_test = subset_regression_data(X_train, X_train)
+    # response values
+    y = define_response_lst(y_train, y_train)
+    # null model
+    loss = regression_null(y, city, predict_quant, loss)
+    # GradientBoostingRegressor
+    loss = regression_gradientboost(X_train, y, X_train, city, predict_quant, loss)
+    # multiple linear regression
+    loss = regression_linear(X_train, y, X_train, city, predict_quant, loss)
+    # random forest regression
+    loss = regression_randomforest(X_train, y, X_train, city, predict_quant, loss)
+    # mars
+    loss = regression_mars(X_train, y, X_train, city, predict_quant, loss)
+    # gam
+    loss = regression_gam(X_train, y, X_train, city, predict_quant, loss)
+    # save results
+    loss.to_csv('data/regression/insample_results_{}.csv'.format(grid_size))
+
+
+###
+# Regression code
+###
+
+def regression_null(y, city, predict_quant, loss):
     '''
     fit the null model for comparison
     '''
     # train the model
+    model = 'average'
 
     # predict the model
     predict_day = np.ones(len(y['day_test'])) * np.mean(y['day_train'])
     predict_night = np.ones(len(y['night_test'])) * np.mean(y['night_train'])
+    predict_nightmax = np.ones(len(y['nightmax_test'])) * np.mean(y['nightmax_train'])
+    predict_daymax = np.ones(len(y['daymax_test'])) * np.mean(y['daymax_train'])
 
-    with plt.style.context('fivethirtyeight'):
-        # plot predict vs actual
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        xy_line = (np.min(y['night_train']),np.max(y['day_train']))
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Null model for {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_null_{}.pdf'.format(predict_quant, city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'null', city, predict_quant)
 
     # calculate the MAE
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
-    # print('\n \nNull model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['null'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
     return(loss)
 
-def regression_gradientboost(X_train, y, X_test, city, predict_quant):
+def regression_gradientboost(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the GradientBoostingRegressor
     '''
-    # print(X_train.columns.values)
+    model = 'gbrf'
     # train the model
-    gbm_day_reg = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
-    gbm_night_reg = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+    gbm_day_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    gbm_night_reg = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    reg_nightmax = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    reg_daymax = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
+    # code.interact(local = locals())
     gbm_day_reg.fit(X_train, y['day_train'])
     gbm_night_reg.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
     # predict the model
     predict_day = gbm_day_reg.predict(X_test)
     predict_night = gbm_night_reg.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
-    xy_line = (np.min(y['night_train']),np.max(y['day_train']))
-    with plt.style.context('fivethirtyeight'):
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Gradient Boosted Trees model for {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_gbrf_{}.pdf'.format(predict_quant, city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
 
-    # calculate the MAE
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
-    # print('\n \nGradient Boosted Trees model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['gbm'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
+    # calculate the error metrics
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
     return(loss)
 
-def regression_linear(X_train, y, X_test, city, predict_quant):
+def regression_linear(X_train, y, X_test, city, predict_quant, loss):
     '''
     fit the multiple linear regressions
     '''
-    # print(X_train.columns.values)
+    model = 'mlr'
     # train the model
     mlr_day_reg = LinearRegression()
     mlr_night_reg = LinearRegression()
+    reg_daymax = LinearRegression()
+    reg_nightmax = LinearRegression()
+
     mlr_day_reg.fit(X_train, y['day_train'])
     mlr_night_reg.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
 
 
     # predict the model
     predict_day = mlr_day_reg.predict(X_test)
     predict_night = mlr_night_reg.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
 
     # plot predict vs actual
-    xy_line = (np.min(y['night_train']),np.max(y['day_train']))
-    with plt.style.context('fivethirtyeight'):
-        plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
-        plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
-        plt.plot(xy_line,xy_line, 'k--')
-        plt.ylabel('Predicted')
-        plt.xlabel('Actual')
-        plt.legend(loc='lower right')
-        plt.title('Multiple Linear Regression model for {}'.format(city))
-        plt.savefig('fig/working/regression/actualVpredict_{}_mlr_{}.pdf'.format(predict_quant,city), format='pdf', dpi=1000, transparent=True)
-        plt.clf()
+    plot_actualVpredict(y, predict_day, predict_night, 'mlr', city, predict_quant)
 
     # calculate the MAE
-    mae_day = np.mean(abs(predict_day - y['day_test']))
-    mae_night = np.mean(abs(predict_night - y['night_test']))
-    r2_day = r2_score(y['day_test'], predict_day)
-    r2_night = r2_score(y['night_test'], predict_night)
-    # print('\n \nMultiple Linear Regression model for {}'.format(city))
-    # print('Nocturnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_night, r2_night))
-    # print('Diurnal \n MAE: {:.4f} \n Out-of-bag R^2: {:.2f}'.format(mae_day, r2_day))
-    rownames = pd.MultiIndex(levels = [['mlr'], [city]], labels=[[0],[0]], names = ['model','city'])
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'],
-                                     ['mae','r2']],
-                                    names=['time','loss'])
-    loss = pd.DataFrame([[mae_day, r2_day, mae_night, r2_night]], columns = header, index = rownames)
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
+    return(loss)
+
+def regression_randomforest(X_train, y, X_test, city, predict_quant, loss):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'rf'
+    # train the model
+    reg_day = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_night = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_nightmax = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_daymax = RandomForestRegressor(n_estimators=500, max_features=1/3)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
+    return(loss)
+
+def regression_mars(X_train, y, X_test, city, predict_quant, loss):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'mars'
+    # train the model
+    reg_day = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_night = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_nightmax = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_daymax = Earth(max_degree=1, penalty=1.0, endspan=5)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
+    return(loss)
+
+def regression_gam(X_train, y, X_test, city, predict_quant, loss):
+    '''
+    fit the GradientBoostingRegressor
+    '''
+    model = 'gam'
+    # train the model
+    reg_day = LinearGAM(n_splines=10)
+    reg_night = LinearGAM(n_splines=10)
+    reg_nightmax = LinearGAM(n_splines=10)
+    reg_daymax = LinearGAM(n_splines=10)
+    reg_day.fit(X_train, y['day_train'])
+    reg_night.fit(X_train, y['night_train'])
+    reg_daymax.fit(X_train, y['daymax_train'])
+    reg_nightmax.fit(X_train, y['nightmax_train'])
+
+    # predict the model
+    predict_day = reg_day.predict(X_test)
+    predict_night = reg_night.predict(X_test)
+    predict_daymax = reg_daymax.predict(X_test)
+    predict_nightmax = reg_nightmax.predict(X_test)
+
+    # plot predict vs actual
+    plot_actualVpredict(y, predict_day, predict_night, 'gbrf', city, predict_quant)
+
+    # calculate the error metrics
+    mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax = calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax)
+
+    # record results
+    loss = record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax)
+
     return(loss)
 
 def full_gbm_regression(df, cities, vars_selected=None):
@@ -514,19 +711,82 @@ def full_gbm_regression(df, cities, vars_selected=None):
         if len(vars_selected)>0:
             df_city = df_city[vars_selected+['city']]
         # no need to divide, but split into X and y
-        X_train[city], X_test, y_train, y_test = train_test_split(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
+        X_train[city], X_test, y_train, y_test = split_holdout(df_city, response, test_size=0)#, random_state=RANDOM_SEED)
         print(len(X_train[city]), len(X_test))
-        # scale explanatory variables
-        X_train[city], X_train[city]  = scale_X(X_train[city], X_train[city])
+        # drop unnecessary variables
+        X_train, X_test = subset_regression_data(X_train, X_test)
         # response values
         y = define_response_lst(y_train, y_train)
         # fit the model
-        reg_gbm['diurnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+        reg_gbm['diurnal'][city] = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
         reg_gbm['diurnal'][city].fit(X_train[city], y['day_train'])
-        reg_gbm['nocturnal'][city] = GradientBoostingRegressor(max_depth=2, random_state=RANDOM_SEED, learning_rate=0.1, n_estimators=500, loss='ls')
+        reg_gbm['nocturnal'][city] = GradientBoostingRegressor(max_depth=2, learning_rate=0.1, n_estimators=500, loss='ls')
         reg_gbm['nocturnal'][city].fit(X_train[city], y['night_train'])
     reg_gbm['covariates'] = X_train[city].columns
     return(reg_gbm, X_train)
+
+def record_result(loss, city, model, mae_day, mae_night, r2_night, r2_day, mae_daymax, mae_nightmax, r2_nightmax, r2_daymax):
+    loss = loss.append({
+        'time_of_day': 'diurnal',
+        'hold_num': city,
+        'model': model,
+        'error_metric': 'r2',
+        'error': r2_day
+    }, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_day}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'mae','error': mae_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnal','hold_num': city,'model': model,'error_metric': 'r2','error': r2_night}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_nightmax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'r2','error': r2_daymax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'nocturnalmax','hold_num': city,'model': model,'error_metric': 'mae','error': mae_nightmax}, ignore_index=True)
+    loss = loss.append({'time_of_day': 'diurnalmax','hold_num': city,'model': model,'error_metric': 'mae','error': mae_daymax}, ignore_index=True)
+
+    return(loss)
+
+def calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nightmax):
+    mae_day = np.mean(abs(predict_day - y['day_test']))
+    mae_night = np.mean(abs(predict_night - y['night_test']))
+    r2_day = r2_score(y['day_test'], predict_day)
+    r2_night = r2_score(y['night_test'], predict_night)
+    mae_daymax = np.mean(abs(predict_daymax - y['daymax_test']))
+    mae_nightmax = np.mean(abs(predict_nightmax - y['nightmax_test']))
+    r2_daymax = r2_score(y['daymax_test'], predict_daymax)
+    r2_nightmax = r2_score(y['nightmax_test'], predict_nightmax)
+    return(mae_day, mae_night,r2_day,r2_night,mae_daymax,mae_nightmax,r2_daymax,r2_nightmax)
+
+###
+# Supporting code
+###
+
+def split_holdout(df, response, test_size):
+    '''
+    Prepare spatial holdout
+    '''
+    # what is the total number of records?
+    n_records = df.shape[0]
+    # what are the holdout numbers to draw from?
+    holdout_freq = df.groupby('holdout')['holdout'].count()
+    holdout_options = list(holdout_freq.index)
+    # required number of records
+    req_records = n_records * (test_size*0.95)
+    # select holdout groups until required number of records is achieved
+    heldout_records = 0
+    heldout_groups = []
+    while heldout_records < req_records:
+        # randomly select a holdout group to holdout
+        hold = np.random.choice(holdout_options, 1, replace = False)[0]
+        # remove that from the options
+        holdout_options.remove(hold)
+        # add that to the heldout list
+        heldout_groups.append(hold)
+        # calculate the number of records held out
+        heldout_records = holdout_freq.loc[heldout_groups].sum()
+    # create the test and training sets
+    X_test = df[df.holdout.isin(heldout_groups)]
+    y_test = response[df.holdout.isin(heldout_groups)]
+    X_train = df[~df.holdout.isin(heldout_groups)]
+    y_train = response[~df.holdout.isin(heldout_groups)]
+    return(X_train, X_test, y_train, y_test)
 
 def loop_variable_selection(df, cities):
     from datetime import datetime
@@ -569,9 +829,9 @@ def feature_selection(holdout_num, city, df, period):
             mae = []
             for h in range(holdout_num):
                 # no need to divide, but split into X and y
-                X_train, X_test, y_train, y_test = train_test_split(df_var, response, test_size=0.2)#, random_state=RANDOM_SEED)
-                # scale explanatory variables
-                X_train, X_test  = scale_X(X_train.copy(), X_test.copy())
+                X_train, X_test, y_train, y_test = split_holdout(df_var, response, test_size=0.25)#, random_state=RANDOM_SEED)
+                # drop unnecessary variables
+                X_train, X_test = subset_regression_data(X_train.copy(), X_test.copy())
                 # response values
                 y = define_response_lst(y_train, y_test)
                 # fit the model
@@ -597,6 +857,37 @@ def feature_selection(holdout_num, city, df, period):
 ###
 # Plotting code
 ###
+# plt.style.use(['seaborn-colorblind'])#,'dark_background'])
+plt.style.use(['tableau-colorblind10'])#,'dark_background'])
+fig_transparency = False
+# figure size (cm)
+width_1col = 8.7/2.54
+width_2col = 17.8/2.54
+golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
+height_1c = width_1col*golden_mean
+height_2c = width_2col*golden_mean
+aspect_2c = width_2col/height_2c
+# font size
+font_size = 11
+dpi = 500
+# additional parameters
+params = {'axes.labelsize': font_size, # fontsize for x and y labels (was 10)
+          'font.size': font_size, # was 10
+          'legend.fontsize': font_size * 2/3, # was 10
+          'xtick.labelsize': font_size,
+          'font.sans-serif' : 'Corbel',
+          # 'ytick.labelsize': 0,
+          'lines.linewidth' : 1,
+          'figure.autolayout' : True,
+          'figure.figsize': [width_2col, height_2c],#[fig_width/2.54,fig_height/2.54]
+          'axes.spines.top'    : False,
+          'axes.spines.right'  : False,
+          'axes.xmargin' : 0
+}
+mpl.rcParams.update(params)
+
+
+
 def plot_density(df, cities):
     '''
     output density plots of the variables
@@ -650,133 +941,157 @@ def plot_density(df, cities):
         plt.savefig('fig/working/density/lst-vs-tr_night.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
 
-def plot_holdout_points(loss):
-    loss_plot = loss.unstack(level=0)
-    loss_plot = loss_plot.unstack(level=0)
-    loss_plot = pd.DataFrame(loss_plot).T
-    loss_plot = pd.melt(loss_plot)
-    loss_plot['city'] = loss_plot['city'].str[-3:]
-    # print(loss_plot)
-    # with plt.style.context('fivethirtyeight'):
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",
-    ]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 20})
-    g = sns.factorplot(orient="h", y="model", x="value", hue="city", linestyles='', markers=['v','o','^','x'],
-    col = "loss", row = "time", data=loss_plot, sharex = 'col', order=['null','mlr','gbm'], aspect=2, scale=1.5)
+def plot_holdout_points(loss, grid_size):
+    '''
+    plot the city holdout validation metrics
+    '''
+    loss['city'] = loss['hold_num'].str[-3:]
+    g = sns.factorplot(y="error", x="time_of_day", hue="city", col = "error_metric", data=loss, sharey = False,
+                       row = 'model',
+                      linestyles='', markers=['$B$','$D$','$X$','$P$'],
+                      hue_order = ['bal', 'det', 'phx', 'por'],
+                      ci=None)
+    # plt.legend(loc='lower center', ncol=4, frameon=False)
+    g.set_titles('{row_name}')
     for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
-            if i==2:
-                ax.set_xlim(0,12)
-                ax.set_xlabel('Mean Absolute Error')
-            elif i==3:
-                ax.set_xlim(-1,1)
-                ax.set_xlabel('Out-of-bag R$^2$')
-    plt.savefig('fig/working/regression/cities_holdout.pdf', format='pdf', dpi=1000, transparent=True)
+        if i%2==1:
+            ax.set_ylim(0,5)
+            ax.set_ylabel('mean absolute error')
+            ax.set_xlabel('')
+        elif i%2==0:
+            ax.set_ylim(-1,1)
+            ax.set_ylabel('out-of-bag R$^2$')
+            ax.set_xlabel('')
+    plt.savefig('fig/working/regression/cities_holdout_{}.pdf'.format(grid_size), format='pdf', dpi=1000, transparent=True)
+    plt.show()
     plt.clf()
 
-def plot_holdouts():
+def plot_holdouts(loss, grid_size):
     '''
     plot boxplots of holdouts
     '''
-    loss = pd.read_csv('data/regression/holdout_results.csv', index_col=[0,1],header=[0,1], skipinitialspace=True,keep_default_na=False )
-    loss['hold_id'] = np.tile(np.repeat(range(100),3),4)
-    loss.set_index('hold_id',append=True,inplace=True)
-    loss.reorder_levels(['hold_id', 'model', 'city'])
-    for error_type in ['r2', 'mae']:
-        loss_type = loss.copy()
-        loss_type = loss_type.xs(error_type, axis=1, level=1)
-        loss_type = loss_type.unstack(level=0)
-        loss_type = loss_type.unstack(level=0)
-        # loss_type = pd.DataFrame(loss_type).T
-        loss_type = pd.melt(loss_type)
-        loss_type[error_type] = loss_type['value']
-        # print(loss_type)
-        five_thirty_eight = [
-            "#30a2da",
-            "#fc4f30",
-            "#e5ae38",
-            "#6d904f",
-            "#8b8b8b",
-        ]
-        sns.set_palette(five_thirty_eight)
-        mpl.rcParams.update({'font.size': 22})
-        g = sns.factorplot(orient="h", x=error_type, y='model', row="city",col="time", data=loss_type, kind="box", order=['null','mlr','gbm'], aspect=2, palette = five_thirty_eight)
+    loss = loss.sort_values(by='model')
+    font_scale = 1.75
+    with sns.plotting_context("paper", font_scale=font_scale):
+        plt.figure(figsize=(width_2col, height_2c))
+        g = sns.catplot(y="error", x="time_of_day", hue="model",
+                        col = "error_metric", data=loss, sharey = False,
+                        col_order = ['r2','mae'],
+                        order = ['night\n(mean)','day\n(mean)','night\n(max)','day\n(max)'],
+                        kind="box",
+                        height = height_2c, aspect = aspect_2c,
+                        legend = False)
+        g.set_titles('')
         for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
-            if i>5:
-                if error_type=='r2':
-                    ax.set_xlabel('Out-of-bag R$^2$')
+            if i%2==1:
+                ax.set_ylim(0,5)
+                ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
+                ax.set_xlabel('')
+            elif i%2==0:
+                if grid_size == 100:
+                    ax.set_ylim(0.5,1)
                 else:
-                    ax.set_xlabel('Mean Absolute Error')
-        for i, ax in enumerate(g.axes.flat):
-            i = 0
-            for patch in ax.artists:
-                patch.set_facecolor(five_thirty_eight[i])
-                i += 1
-        plt.savefig('fig/working/regression/holdout_results_{}.pdf'.format(error_type), format='pdf', dpi=1000, transparent=True)
+                    ax.set_ylim(0,1)
+                ax.set_ylabel('out-of-bag R$^2$',size=font_size*1.5)
+                ax.set_xlabel('')
+                # plt.gca().invert_yaxis()
+        plt.savefig('fig/report/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
         plt.clf()
 
-def plot_importance(reg_gbm, cities, show_plot=False):
+def plot_importance(results_swing, grid_size):
     '''
     plot the feature importance of the variables and the cities
     '''
-    cities =  cities.copy()
-    cities.append('all')
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 20})
-    # get the covariates - these will be the indices in the dataframe
-    header = pd.MultiIndex.from_product([['diurnal','nocturnal'], cities],
-                                    names=['time','city'])
-    var_imp = pd.DataFrame(columns = header, index = list(reg_gbm['covariates']))
-    # loop the cities to add the var imp to the df
-    for city in cities:
-        for time in ['diurnal','nocturnal']:
-            var_imp.loc[:,(time, city)] = reg_gbm[time][city].feature_importances_
-    var_imp.loc[:,('nocturnal','mean')] = np.mean(var_imp.loc[:,'nocturnal'].drop('all',axis=1),axis=1)
-    var_imp = var_imp.sort_values(by=('nocturnal','mean'),ascending=False)
-    # make the nocturnal values negative
-    nocturnal = var_imp.loc[:,'nocturnal'].copy()
-    nocturnal = nocturnal.drop('mean',axis=1)
-    nocturnal['covariate'] = nocturnal.index
-    nocturnal = pd.melt(nocturnal,id_vars=['covariate'])
-    nocturnal.loc[:,'value'] = nocturnal['value'] * -1
-    # diurnal
-    diurnal = var_imp.loc[:,'diurnal'].copy()
-    diurnal.loc[:,'covariate'] = diurnal.index
-    diurnal = pd.melt(diurnal,id_vars=['covariate'])
+    # order features by nocturnal swing
+    results_swing = results_swing.replace(feature_names)
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
+    results_swing = results_swing.replace(model_names)
+
     # plot
-    fig, ax = plt.subplots()
-    fig.set_size_inches(15, 9)
-    ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=nocturnal, palette = five_thirty_eight)
-    ax = sns.barplot(orient="h", y='covariate', x='value',hue='city', data=diurnal, palette = five_thirty_eight)
-    plt.xlabel('Variable Importance')
-    plt.ylabel('Variables')
-    # legend
-    handles, labels = ax.get_legend_handles_labels()
-    l = plt.legend(handles[0:len(cities)], labels[0:len(cities)], loc='lower right')
-    # zero line
-    [plt.axvline(_x, linewidth=0.5, color='k', linestyle='--') for _x in np.arange(-0.3, 0.4, 0.1)]
-    plt.axvline(x=0, color='k', linestyle='-', linewidth = 2)
-    plt.xlim(-0.4,0.4)
-    plt.tight_layout()
-    # save the figure
-    if show_plot:
+    # font_size = 15
+    font_scale = 3#1.75
+    with sns.plotting_context("paper", font_scale=font_scale):
+    # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+    # plt.figure(figsize=(width_2col, height_2c))
+        g = sns.factorplot(x='swing', y='independent', hue='dependent',
+                            data=results_swing, kind='bar', col='model',
+                            order = feature_order,
+                            hue_order=['lst_night_mean','lst_day_mean'],
+                            col_order=['random forest','gradient boosted\ntrees',
+                                        'multivariate adaptive\nspline (mars)',
+                                        'generalized additive\n(gam)',
+                                        'multivariate linear'],
+                            height = height_2c*2,
+                            aspect = 0.75
+                            # col_wrap = 3
+                            )
+
+        g.set_axis_labels("variable influence", "")
+        g.set_titles("{col_name}",size=font_size*2.5)
+        # g.tick_params(labelsize=font_size)
+
+        new_labels = ['nocturnal','diurnal']
+        for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+
+        # fig = plt.gcf()
+        # fig.set_size_inches(15,20)
+
+        plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
-    else:
-        plt.savefig('fig/working/variable_importance_selected.pdf', format='pdf', dpi=1000, transparent=True)
         plt.clf()
-    importance_order = var_imp.index.values
-    return(importance_order)
+    return(feature_order)
+
+def plot_importance_max(df, grid_size):
+    '''
+    plot the feature importance of the variables and the cities
+    '''
+    df = df.replace(feature_names)
+    df = df.replace(model_names)
+    # order features by nocturnal swing
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        results_swing = df.copy()
+        results_swing = results_swing[results_swing.dependent == dep]
+        feature_order = list(results_swing[results_swing.dependent==dep].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
+        # plot
+        # font_size = 15
+        font_scale = 1.5#1.75
+        with sns.plotting_context("paper", font_scale=font_scale):
+        # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+        # plt.figure(figsize=(width_2col, height_2c))
+            g = sns.catplot(x='swing', y='independent', hue='dependent',
+                                data=results_swing, kind='bar', col='model',
+                                order = feature_order,
+                                # row_order=['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max'],
+                                col_order=['random forest',
+                                            'convolutional\nneural network',
+                                            'gradient boosted\ntrees',
+                                            'multivariate adaptive\nspline (mars)',
+                                            'generalized additive\n(gam)',
+                                            'multivariate linear'],
+                                height = height_2c,
+                                aspect = 0.60,
+                                # col_wrap = 3
+                                legend = False
+                                )
+
+            g.set_axis_labels("variable influence", "")
+            g.set_titles("{col_name}",size=font_size*2.5/2)
+            g.set(xlim=(0, 0.4))
+            # g.tick_params(labelsize=font_size)
+
+            # new_labels = ['nocturnal_max','diurnal_max']
+            # for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
+
+            # fig = plt.gcf()
+            # fig.set_size_inches(15,20)
+
+            plt.savefig('fig/working/variableImportance_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
+            plt.show()
+            plt.clf()
+    return(feature_order)
 
 def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, show_plot=False):
     '''
@@ -785,14 +1100,7 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
     cities =  cities.copy()
     cities.append('all')
     # plot setup (surely this can be a function)
-    five_thirty_eight = [
-        "#30a2da",
-        "#fc4f30",
-        "#e5ae38",
-        "#6d904f",
-        "#8b8b8b",]
-    sns.set_palette(five_thirty_eight)
-    mpl.rcParams.update({'font.size': 20})
+
     # init subplots (left is nocturnal, right is diurnal)
     fig, axes = plt.subplots(6, 2, figsize = (15,30), sharey=True)#'row')
     # loop through the top n variables by nocturnal importance
@@ -829,42 +1137,209 @@ def plot_dependence(importance_order, reg_gbm, cities, X_train, vars_selected, s
         fig.savefig('fig/working/partial_dependence.pdf', format='pdf', dpi=1000, transparent=True)
         fig.clf()
 
+def plot_dependence_city(grid_size):
+    '''
+    Plot the partial dependence for the different regressors
+    '''
+    # import data
+    pdp_results = pd.read_csv('data/regression/city_{}/results_partial_dependence_{}.csv'.format(grid_size, grid_size))
+    # undo the normalization
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+    for index, row in pdp_results.iterrows():
+        feature = row.independent
+        pdp_results.loc[index,'x'] = row['x']*normalize_parameters.loc[feature,'sd'] + normalize_parameters.loc[feature,'mean']
+    # humanize the names
+    pdp_results = pdp_results.replace(feature_names)
+    pdp_results = pdp_results.replace(model_names)
+    if grid_size == 500:
+        var_interests = {'lst_day_mean':['lcov_11', 'ndvi_mean', 'tree_mean', 'alb_mean','dsm_mean'],
+                        'lst_night_mean':['tree_mean', 'ndvi_mean', 'lcov_11', 'svf_mean', 'dsm_mean'],
+                        'lst_day_max':['tree_min', 'ndvi_mean','alb_mean','lcov_11','nbdi_max'],
+                        'lst_night_max':['tree_min', 'ndvi_mean','tree_mean','dsm_mean','svf_mean']}
+    else:
+        var_interests = {'lst_day_mean':['tree_mean', 'ndvi_mean', 'alb_mean','dsm_mean','svf_mean'],
+                        'lst_night_mean':['tree_mean', 'ndvi_mean', 'alb_mean', 'svf_mean', 'dsm_mean'],
+                        'lst_day_max':['ndvi_mean','tree_mean','alb_mean','tree_sd','dsm_mean'],
+                        'lst_night_max':['tree_mean', 'ndvi_mean','tree_sd','svf_mean','alb_mean']}
+    # plot
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        feature_order = var_interests[dep]
+        feature_order = [feature_names[x] for x in feature_order]
+        pdp_results_plot = pdp_results[pdp_results.dependent == dep]
+        # plot
+        # font_size = 15
+        font_scale = 1.5#1.75
+        with sns.plotting_context("paper", font_scale=font_scale):
+        # sns.set_context("paper", rc={"font.size":font_size,"axes.titlesize":font_size,"axes.labelsize":font_size})
+        # plt.figure(figsize=(width_2col, height_2c))
+            g = sns.FacetGrid(pdp_results_plot, col="independent", hue = 'city',
+                                sharex=False, col_order = feature_order,
+                                height = height_2c,
+                                aspect = 1
+                                )
+            g = g.map(plt.plot, 'x', 'mean')
+            g.set_titles('')
+            axes = g.axes[0]
+            i = 0
+            for ax in axes:
+                ax.axhline(0, ls='--', color='red')
+                ax.set_xlabel(feature_order[i])
+                i += 1
 
-def scatter_lst(df, cities):
+            plt.savefig('fig/working/pdp_city_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
+            plt.show()
+            plt.clf()
+
+def scatter_lst(df, cities, grid_size):
     '''
     scatter lst night vs day
     '''
-
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
     # scatter plot thermal radiance against land surface, colored by city
     # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
-    with plt.style.context('fivethirtyeight'):
-        for i in range(len(cities)):
-            city = cities[i]
-            df_city = df.loc[df['city']==city]
-            plt.scatter(df_city['lst_day_mean_mean'], df_city['lst_night_mean_mean'], label = city, alpha = 0.5)
-        plt.legend(loc='lower right')
-        plt.xlabel('Day LST ($^o$C)')
-        plt.ylabel('Night LST ($^o$C)')
-        plt.text(20, 40,'Correlation = {0:.2f}'.format(df_city['lst_day_mean_mean'].corr(df_city['lst_night_mean_mean'])), ha='left', va='top')
-        plt.savefig('fig/working/density/lst_night-vs-day.pdf', format='pdf', dpi=300, transparent=True)
-        plt.clf()
+    # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_2col, height_2c))
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['lst_day_mean'], df_city['lst_night_mean'], label = city, alpha = 0.5)
+        print(df_city['lst_day_mean'].corr(df_city['lst_night_mean']))
+    plt.legend(loc='lower right')
+    plt.xlabel('$\Delta$mean, average daytime LST ($^o$C)')
+    plt.ylabel('$\Delta$mean, average nighttime LST ($^o$C)')
+    plt.xlim(-30,25)
+    plt.ylim(-20,10)
+    plt.text(-28, 5,'correlation = {0:.2f}'.format(df['lst_day_mean'].corr(df['lst_night_mean'])), ha='left', va='top')
+    plt.savefig('fig/report/lst_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
+    plt.show()
+    plt.clf()
 
-def joyplot_lst(df, cities):
-    '''
-    scatter lst night vs day
-    '''
 
+def scatter_maxlst(df, cities, grid_size):
+    '''
+    scatter max lst night vs day
+    '''
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
     # scatter plot thermal radiance against land surface, colored by city
     # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
-    import joypy
-    df1 = df[['lst_night_mean_mean','lst_day_mean_mean','city']]
-    df1 = df1.rename(index=str, columns={"lst_night_mean_mean": "night", "lst_day_mean_mean": "day"})
+    # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_2col, height_2c))
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['lst_day_max'], df_city['lst_night_max'], label = city, alpha = 0.5)
+        print(df_city['lst_day_max'].corr(df_city['lst_night_max']))
+    plt.legend(loc='lower right')
+    plt.xlabel('$\Delta$mean, maximum daytime LST ($^o$C)')
+    plt.ylabel('$\Delta$mean, maximum nighttime LST ($^o$C)')
+    plt.xlim(-30,25)
+    plt.ylim(-20,10)
+    plt.text(-28, 5,'correlation = {0:.2f}'.format(df['lst_day_max'].corr(df['lst_night_max'])), ha='left', va='top')
+    plt.savefig('fig/report/lst_max_night-vs-day_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
+    plt.show()
+    plt.clf()
+
+
+def joyplot_lst(df, grid_size):
+    '''
+    joy (ridge) plot of lst night vs day
+    '''
+    df1 = df[['lst_night_mean','lst_day_mean','city']]
+    df1 = df1.replace(city_names)
+    df1 = df1.rename(index=str, columns={"lst_night_mean": "nocturnal", "lst_day_mean": "diurnal"})
     df1 = df1.replace([np.inf, -np.inf], np.nan)
     df1 = df1.dropna(axis=0, how='any')
-    with plt.style.context('fivethirtyeight'):
-        fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True)
-        plt.xlabel('Land Surface Temperature ($^o$C)')
-    plt.savefig('fig/working/density/joyplot_lst.pdf', format='pdf', dpi=300, transparent=True)
+    # with plt.style.context('fivethirtyeight'):
+    fig, axes = joypy.joyplot(df1, by='city', ylim='own',legend=True,
+                            figsize=(width_2col, height_2c))
+    plt.xlabel('land surface temperature ($^{o}$C)')
+    plt.savefig('fig/report/joyplot_lst_{}.pdf'.format(grid_size), format='pdf', dpi=300, transparent=True)
+    plt.show()
+    plt.clf()
+
+def plot_actualVpredict(y, predict_day, predict_night, model, city, target):
+    '''
+    plot a scatter of predicted vs actual points
+    '''
+    xy_line = (np.min([y['night_test'],y['day_test']]),np.max([y['night_test'],y['day_test']]))
+    # with plt.style.context('fivethirtyeight'):
+    plt.scatter(y['day_test'], predict_day, label = 'Diurnal')
+    plt.scatter(y['night_test'], predict_night, label = 'Nocturnal')
+    plt.plot(xy_line,xy_line, 'k--')
+    plt.ylabel('Predicted')
+    plt.xlabel('Actual')
+    plt.legend(loc='lower right')
+    plt.title('Gradient Boosted Trees \n {}'.format(city))
+    plt.savefig('fig/working/regression/actualVpredict_{}_{}_{}.pdf'.format(target, model, city), format='pdf', dpi=1000, transparent=True)
+    plt.clf()
+
+def plot_2d_partialdependence(regressor, time_of_day, grid_size, df_x):
+    '''
+    Plot the 2d partial dependence
+    '''
+    # two way partial dependence
+    figs, axes = plt.subplots(3, 2, figsize = (width_2col, height_2c*2), sharey=False, sharex=False)
+    # loop through the top n variables by nocturnal importance
+    df_vars = list(df_x)
+    if grid_size == 500:
+        # different due to variables included
+        features = [(1,4),(1,5),(0,4),(0,5),(2,4),(2,5)]
+    else:
+        features = [(0,6),(0,8),(1,6),(1,8),(2,6),(2,8)]
+    # import data to unnormalize
+    normalize_parameters = pd.read_csv('data/normalization_parameters_{}.csv'.format(grid_size))
+    normalize_parameters = normalize_parameters.set_index('feature')
+
+    for i in range(len(features)):
+        plot_row = floor(i/2)
+        left_right = np.mod(i,2)
+        # calculate the partial dependence
+        pdp, ax = partial_dependence(regressor, features[i], X = df_x,
+                            grid_resolution = 50)
+        # get data
+        XX, YY = np.meshgrid(ax[0], ax[1])
+        Z = pdp[0].reshape(list(map(np.size, ax))).T
+        # unnormalize
+        feature_x = df_vars[features[i][0]]
+        feature_y = df_vars[features[i][1]]
+        XX = XX*normalize_parameters.loc[feature_x,'sd'] + normalize_parameters.loc[feature_x,'mean']
+        YY = YY*normalize_parameters.loc[feature_y,'sd'] + normalize_parameters.loc[feature_y,'mean']
+
+        # add the line to the plot
+        CS = axes[plot_row, left_right].contour(XX,YY,Z)#, levels=np.arange(-8,4,1))
+        axes[plot_row, left_right].clabel(CS, inline=True, fontsize=12)
+        # title and axis labels
+        axes[plot_row, left_right].set_xlabel(feature_names[feature_x])
+        axes[plot_row, left_right].set_ylabel(feature_names[feature_y])
+    # save
+    plt.savefig('fig/report/pdp_2d_{}_{}.pdf'.format(time_of_day,grid_size), format='pdf', dpi=500, transparent=True)
+    plt.show()
+    plt.clf()
+
+def scatter_tree_imp(df, cities, grid_size):
+    '''
+    scatter lst night vs day
+    '''
+    df = df.replace(city_names)
+    cities = [city_names[i] for i in cities]
+    # scatter plot thermal radiance against land surface, colored by city
+    # bmap = brewer2mpl.get_map('Paired','Qualitative',4).mpl_colors
+    # with plt.style.context('fivethirtyeight'):
+    plt.figure(figsize=(width_2col, height_2c))
+    for i in range(len(cities)):
+        city = cities[i]
+        df_city = df.loc[df['city']==city]
+        plt.scatter(df_city['imp_mean'], df_city['tree_mean'], label = city, alpha = 0.5)
+        print(df_city['imp_mean'].corr(df_city['tree_mean']))
+    plt.legend(loc='lower right')
+    plt.xlabel('% impervious surface')
+    plt.ylabel('% tree canopy cover')
+    plt.text(20, 80,'correlation = {0:.2f}'.format(df['imp_mean'].corr(df['tree_mean'])), ha='left', va='top')
+    plt.savefig('fig/report/imp_v_tree_{}.png'.format(grid_size), format='png', dpi=300, transparent=True)
+    plt.show()
     plt.clf()
 
 if __name__ == '__main__':

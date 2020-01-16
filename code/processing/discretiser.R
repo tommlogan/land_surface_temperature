@@ -23,9 +23,9 @@
 ###      *** the first row of the datasource file must be a shapefile with the entire area data
 ###      All shapefiles must be It also must be projected in the units you want. e.g. NAD83 (feet)
 ###      Polygons where interested in the distance need to be in both 
-#######
+####
 ## Libraries
-#######
+####
 library(rgdal)
 library(raster)
 library(rgeos)
@@ -36,18 +36,19 @@ library(maptools)
 library(parallel)
 library(spex)
 library(pbapply)
+library(data.table)
 
 no_cores <<- floor(detectCores() - 4) # Calculate the number of cores
 kPathGriddedData <- file.path('data', 'processed', 'grid')
 kPathDataSource <- file.path('code','processing')
 kPathDataTemp <- file.path('data','intermediate')
 
-main = function(data.fn,a=1){
-  #######
+main = function(data.fn,a=1, gridSize = 500){
+  ####
   ## USER INPUTS
-  #######
+  ####
   # what is the square grid size in meters?
-  gridSize = 500
+  # gridSize = 100#500
   # what is minimum grid area you'll include?
   minGridArea = 0
   # what projection are you using? 
@@ -64,7 +65,7 @@ main = function(data.fn,a=1){
   for (city.name in cities){
     # get city database
     database <- database.complete[database.complete$City == city.name,]
-    print(paste0(Sys.time(), ': Beginning to grid the data for ', city.name))
+    print(paste0(Sys.time(), ': Beginning to grid the data for ', city.name, ' at ', gridSize, 'm'))
     
     ####
     ## Create grid
@@ -114,6 +115,13 @@ main = function(data.fn,a=1){
       print(i)
       print(length(sg))
       
+      # save temp
+      today = Sys.Date()
+      date_str = format(today,format="%Y-%m-%d")
+      dir.save = file.path(kPathGriddedData, city.name, date_str)
+      dir.create(dir.save)
+      outputFileName <- paste(tolower(city.name),'_data_',gridSize,'_temp',sep='')
+      fwrite(sg@data,paste0(dir.save,'/',outputFileName,'.csv'))
     }
     
     ####
@@ -138,7 +146,7 @@ main = function(data.fn,a=1){
     dir.previous <- getwd()
     setwd(dir.save)
     # what is the output filename?
-    outputFileName <- paste(tolower(city.name),'_data',sep='')
+    outputFileName <- paste(tolower(city.name),'_data_',gridSize,sep='')
     outvar.name <- paste0('data.',tolower(city.name))
     
     ####
@@ -146,7 +154,7 @@ main = function(data.fn,a=1){
     ####
     assign(outvar.name, sg@data)
     save(list = outvar.name, file = paste(outputFileName,'.RData',sep='')) 
-  
+    
     ####
     ## add to the csv file
     ####
@@ -310,6 +318,10 @@ areaLevel = function(sg,sf){
 areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
   # intersects the polygons with the grid and determines the area
   city.name <- unique(database$City)
+  # union the polygons by id
+  # lps <- getSpPPolygonsLabptSlots(sf)
+  # ID.one.bin <- cut(lps[,1], range(lps[,1]), include.lowest=TRUE)
+  # sf <- unionSpatialPolygons(sf, ID.one.bin)
   if (to_save){
     # check if a saved RData file already exists
     gridSize = attr(sg,'grid_size')
@@ -320,11 +332,9 @@ areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
       # if it does exist, load the data file
       load(gridded_filename)
     }  else {
-      ## CREATE TEMPORARY GRID
-      sg_temp = createGrid(gridSize,database)
       
-      if (proj4string(sg_temp) != proj4string(sf)){
-        sf = spTransform(sf, CRS(proj4string(sg_temp)))
+      if (proj4string(sg) != proj4string(sf)){
+        sf = spTransform(sf, CRS(proj4string(sg)))
       }
       # address geometry issues
       sf_buffer <- function(sf) {
@@ -349,47 +359,26 @@ areaInGrid = function(sg,sf,data.name,database,to_save = TRUE){
         return(sf)
       }
       
-      sf = sf_buffer(sf)
-      # plot(sf)
+      # intersect the grid with the shapefile
+      sg_temp <- gIntersection(sf,sg,byid = TRUE)
       
-      area_in_poly = function(j){
-        p1 = grid_cells[j]
-        proj4string(p1) = proj4string(sf)
-        int = intersect(p1,sf)
-        if (is.null(int)){
-          area=0
-        } else {
-          area = int@polygons[[1]]@area
-        }
-        return(area)
-      }
+      # calculate the area
+      sg_temp$area <- area(sg_temp)
+      sg_temp@data[,data.name] <- sg_temp$area
+      sg_temp$area <- NULL
       
-      # make a list of the polygons in the grid
-      grid_cells = SpatialPolygons(sg_temp@polygons)
-      # parallelise
-      
-      cl <- makeCluster(no_cores,outfile="")
-      clusterExport(cl, c("sf","grid_cells","area_in_poly"), envir=environment())
-      clusterEvalQ(cl, c(library(raster)))
-      area_list = parLapply(cl,seq(1,length(grid_cells)),function(j) area_in_poly(j))
-      stopCluster(cl)
-      
-      # add new covariate to dataframe
-      sg_temp@data[,data.name]=unlist(area_list)
-      # }
-      
-      # writes to shapefile
-      # writeOGR(sg,dir.work, outputFileName, driver = 'ESRI Shapefile') # writePolyShape(sg,outputFileName)
-      # writes to csv
+      # fix the row names
+      ids <- do.call(rbind, strsplit(row.names(sg_temp), ' '))
+      # sg_temp$g_idx <- ids[,2]
+      sg_temp$idx <- match(ids[,2], rownames(sg@data))
       
     }
-    # remove excess fields
-    sg_temp$area = NULL; sg_temp$cId = NULL; sg_temp@data$x = NULL; sg_temp@data$y = NULL; 
+    # save
     save(sg_temp, file = gridded_filename)
   }
   
   ## JOIN THE SG
-  sg@data = cbind(sg@data, sg_temp@data)
+  sg <- merge(sg, sg_temp@data, by.x = "cId", by.y = 'idx')
   
   return(sg)
 }
@@ -699,13 +688,15 @@ processRaster = function(sg,data.raster = data.current){
   cell$mean = lapply(cell_vals, FUN=mean, na.rm=TRUE)
   cell$max = lapply(cell_vals, FUN=max, na.rm=TRUE)
   cell$min = lapply(cell_vals, FUN=min, na.rm=TRUE)
+  cell$sd = lapply(cell_vals, FUN=sd, na.rm=TRUE)
   # unlist, brings nested values into single list
   cell$mean = unlist(cell$mean)
   cell$max = unlist(cell$max)
   cell$min = unlist(cell$min)
+  cell$sd = unlist(cell$sd)
   # Join values to polygon data
   # append to datastructure
-  funs = c('mean','max', 'min')
+  funs = c('mean','max', 'min','sd')
   for (fun in funs){
     newVar = paste(data.name,'_',fun,sep='')
     sg@data[newVar] = 0*nrow(sg)
@@ -758,7 +749,7 @@ categoriseRaster = function(sg, data.raster, database){
     # init the dataframe with the categories
     area.classes <- paste0(data.name, '_',cats)
     sg_temp@data[,area.classes] <- 0
-  
+    
     # subset raster
     rast <- data.raster
     # rast[rast != catg] <- NA
@@ -766,20 +757,20 @@ categoriseRaster = function(sg, data.raster, database){
     # make a list of the polygons in the grid
     grid.cells <- SpatialPolygons(sg_temp@polygons)
     grid.number <- length(grid.cells)
-      
+    
     raster_area_in_poly = function(j){
-        # subset raster to grid cell
-        p1 = grid.cells[j]
-        proj4string(p1) = proj4string(rast)
-        r.cell = mask(rast, p1)
-        
-        # get areas
-        rast.area <- tapply(raster::area(r.cell), r.cell[], sum)
-        if (length(rast.area) == 0){
-          rast.area <- array(0, dim = c(length(cats)))
-          names(rast.area) <- cats
-        }
-        
+      # subset raster to grid cell
+      p1 = grid.cells[j]
+      proj4string(p1) = proj4string(rast)
+      r.cell = mask(rast, p1)
+      
+      # get areas
+      rast.area <- tapply(raster::area(r.cell), r.cell[], sum)
+      if (length(rast.area) == 0){
+        rast.area <- array(0, dim = c(length(cats)))
+        names(rast.area) <- cats
+      }
+      
       return(rast.area)
     }
     
@@ -797,7 +788,7 @@ categoriseRaster = function(sg, data.raster, database){
       area.classes <- paste0(data.name, '_',names(area.g))
       sg_temp@data[g, area.classes] <- area.g
     }
-      
+    
     ## SAVE CATEGORISED RASTER
     ####
     # remove excess fields

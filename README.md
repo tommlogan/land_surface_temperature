@@ -88,7 +88,7 @@ I could estimate the
 * mean building height: https://developmentseed.org/blog/2014/08/07/processing-lidar-point-cloud/
 * or, i could just get an estimate of mean lidar height (which is an estimate of development)
 
-When a lidar point cloud is available (like in the case of Baltimore) it is imported as a LasDataset and then using the `LAS Dataset to Raster` tool, a raster is created.
+When a lidar point cloud is available (like in the case of Baltimore) it is imported as with `Create LAS Dataset` and then using the `LAS Dataset to Raster` tool, a raster is created.
 When a set of tif tiles is available (like from NOAA), create a new raster catalog (left click on a geodb in ArcMap), add the files to the dataset, then using the `Raster Catalog to Raster Dataset` tool.
 
 The sky view factor is calculated using the DSM in the code `processing\calc_svf.R`.
@@ -111,6 +111,10 @@ I modified the code from www.github.com/tommlogan/spatial_data_discretiser: `cod
   3. this must include the epsg projection reference for the appropriate state plane in meters: e.g. http://www.spatialreference.org/ref/?search=Maryland
   4. run the code's function `main('data_to_grid.csv')`
   5. I think I should remove the area column and instead turn the lcov_# variables into a percentage of the area - which i've done somewhere...
+
+### Data Cleaning
+1. Remove the `ntl_var` variables. There are too many NaNs because the variance is so little and the data source resolution is so low.
+2.
 
 ### 4 Exploratory data analysis
   1. See the Jupyter notebook `explore.ipynb`
