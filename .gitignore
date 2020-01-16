@@ -24,11 +24,8 @@ maps
 venv
 .Rproj.user
 Index
-<<<<<<< HEAD
-submission/
-=======
 *.tbx
 **/.ipynb_checkpoints
 code/analysis/cnn
 *.log
->>>>>>> fb3fbf430e3f0e8ea82cdd5b427c035bc29c2f45
+submission/
