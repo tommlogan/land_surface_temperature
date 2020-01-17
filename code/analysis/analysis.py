@@ -41,19 +41,19 @@ RANDOM_SEED = 3201
 
 # other constants
 city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'}
-model_names = {'rf':'random forest','mlr':'multivariate linear',
-                'gam':'generalized additive\n(gam)',
-                'gbrt':'gradient boosted\ntrees',
-                'mars':'multivariate adaptive\nspline (mars)',
-                'cnn':'convolutional\nneural network'}
-feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
-                'svf_mean':'sky view factor','dsm_mean':'digital surface model',
-                'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
-                'tree_max':'max % tree can.','bldg':'% building area','pdens_mean':'pop. density',
-                'tree_min':'min % tree can.','svf_max':'max sky view factor',
-                'tree_sd': '% tree can. stand. dev.', 'nbdi_sd_sl':'nbdi surrounding stand. dev.',
-                'tree_sd_sl':'% tree can. surrounding stand. dev.',
-                'ndvi_sd': 'ndvi stand. dev'
+model_names = {'rf':'random forest','mlr':'linear',
+                'gam':'generalized additive (gam)',
+                'gbrt':'g. boosted trees',
+                'mars':'multiv. adaptive spline (mars)',
+                'cnn':'c. neural network'}
+feature_names = {'lcov_11' : 'water %','tree_mean':'tree can. % mean','ndvi_mean':'ndvi',
+                'svf_mean':'sky view factor mean','dsm_mean':'d. surface model mean',
+                'alb_mean':'albedo mean','dsm_sd':'d. surface model sdev','nbdi_max':'nbdi max',
+                'tree_max':'tree can. % max','bldg':'building % area','pdens_mean':'pop. density',
+                'tree_min':'tree can. % min','svf_max':'sky view factor max',
+                'tree_sd': 'tree can. % sdev.', 'nbdi_sd_sl':'nbdi surrounding sdev.',
+                'tree_sd_sl':'tree can. % surrounding sdev.',
+                'ndvi_sd': 'ndvi sdev'
                 }
 
 CORES_NUM = min(50,int(os.cpu_count()*3/4))
@@ -1039,6 +1039,68 @@ def plot_importance(results_swing, grid_size):
         # fig.set_size_inches(15,20)
 
         plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
+        plt.clf()
+    return(feature_order)
+
+def plot_importance_stacked(results_swing, grid_size):
+    '''
+    plot the feature importance of the variables and the cities
+    '''
+    plt.style.use(['tableau-colorblind10'])#,'dark_background'])
+    fig_transparency = False
+    # figure size (cm)
+    width_1col = 8.7/2.54
+    width_2col = 17.8/2.54
+    golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
+    height_1c = width_1col*golden_mean
+    height_2c = width_2col*golden_mean
+    aspect_2c = width_2col/height_2c
+    # font size
+    font_size = 8
+    dpi = 500
+    # additional parameters
+    params = {'axes.labelsize': font_size, # fontsize for x and y labels (was 10)
+              'font.size': font_size, # was 10
+              'legend.fontsize': font_size * 2/3, # was 10
+              'xtick.labelsize': font_size,
+              'font.sans-serif' : 'Corbel',
+              # 'ytick.labelsize': 0,
+              'lines.linewidth' : 1,
+              'figure.autolayout' : True,
+              'figure.figsize': [width_1col, height_1c],#[fig_width/2.54,fig_height/2.54]
+              'axes.spines.top'    : False,
+              'axes.spines.right'  : False,
+              'axes.xmargin' : 0
+    }
+    mpl.rcParams.update(params)
+    # order features by nocturnal swing
+    results_swing = results_swing.replace(feature_names)
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
+    results_swing = results_swing.replace(model_names)
+
+    results_swing['swing_weighted'] = results_swing.swing * results_swing.error
+
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        wing = results_swing.copy()
+        wing = wing[wing.dependent == dep]
+        wing = wing.pivot(index= 'independent', columns = 'model', values='swing')
+
+        # plot
+        font_scale = 3#1.75
+        # with sns.plotting_context("paper", font_scale=font_scale):
+        g = wing.plot(stacked=True, kind='bar')
+
+        g.set_xlabel("")
+        g.set_ylabel("variable\ninfluence")
+        g.set_ylim(0,2)
+        g.axes.xaxis.set_ticklabels([])
+        g.legend().remove()
+        # g.legend(loc='lower center', ncol=3, frameon=False)
+
+
+        plt.savefig('fig/working/variableImportance_stack_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
         plt.clf()
     return(feature_order)
