@@ -1095,7 +1095,7 @@ def plot_importance_stacked(results_swing, grid_size):
         g.set_xlabel("")
         g.set_ylabel("variable\ninfluence")
         g.set_ylim(0,2.5)
-        # g.axes.xaxis.set_ticklabels([])
+        g.axes.xaxis.set_ticklabels([])
         g.legend().remove()
         # g.legend(loc='lower center', ncol=3, frameon=False)
 
