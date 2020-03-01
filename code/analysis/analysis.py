@@ -999,6 +999,13 @@ def plot_holdouts(loss, grid_size):
         plt.show()
         plt.clf()
 
+        # save the results to csv
+        loss = loss.replace({'diurnal':'lst_day_mean','diurnalmax':'lst_day_max','nocturnal':'lst_night_mean','nocturnalmax':'lst_night_max', 'gbrf':'gbrt'})
+        loss_mean = loss.groupby(['error_metric','time_of_day','model']).mean()['error']
+        loss_mean = loss_mean.unstack(-1)
+        loss_mean.to_csv('fig/working/holdout_results_{}.csv'.format(grid_size))
+        print(loss_mean)
+
 def plot_importance(results_swing, grid_size):
     '''
     plot the feature importance of the variables and the cities
