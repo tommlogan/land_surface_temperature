@@ -5,6 +5,7 @@ literature
 *.RData
 bayesnet
 data
+!.gitkeep
 **/_scratch
 *.Rproj
 figs/exploratory
