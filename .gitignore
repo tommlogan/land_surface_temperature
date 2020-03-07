@@ -26,7 +26,8 @@ venv
 .Rproj.user
 Index
 *.tbx
-**\.ipynb_checkpoints\
+**\.ipynb_checkpoints\*
+**/.ipynb_checkpoints/*
 code/analysis/cnn
 *.log
 submission/
