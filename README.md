@@ -7,10 +7,9 @@ Understanding the factors influencing urban land surface temperature during the 
 
 ## Cities analysed:
 * [x] Baltimore (bal)
-* [ ] Detroit (det)
-* [ ] Phoenix (phx)
-* [ ] Portland (por)
-* [ ] ?Atlanta (atl)
+* [x] Detroit (det)
+* [x] Phoenix (phx)
+* [x] Portland (por)
 
 ## Steps:
 1. Collect the raw data
@@ -18,6 +17,20 @@ Understanding the factors influencing urban land surface temperature during the 
 2. Prepare other images (tree canopy, land cover, impervious surface)
 3. Grid the data for analysis as necessary
 2. Statistical analysis
+
+## Code to run
+1. L8_processing.py
+2. discretiser.R
+3. prepare_data.py
+4. manually select variables based on VIF (explore_data.ipynb)
+5. The following can be run at the same time:
+    1. holdout_crossvalidation.ipynb
+    1. variable_importance.ipynb
+    1. partial_dependence_PY.ipynb    
+    1. cnn/2-holdout-loop.ipynb (for each response)
+6. cnn/results_format.py
+7. then plot
+
 
 ### 1. Raw data
 #### Nighttime Light Intensity
