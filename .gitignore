@@ -28,7 +28,7 @@ Index
 *.tbx
 **\.ipynb_checkpoints\*
 **/.ipynb_checkpoints/*
-code/analysis/cnn
+code/analysis
 *.log
 submission/
 *.ini
