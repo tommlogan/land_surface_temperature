@@ -12,16 +12,16 @@ scale = True
 def main(scale=True):
 
     cities = ['bal','det','phx','por']
-    grid_size = 100
+    grid_size = 500
     # init all city dataframe
     df = pd.DataFrame()
     add_index = 0
     for city in cities:
         # import city data
-        if grid_size == 100:
-            dir_date = '2018-10-20'
-        else:
-            dir_date = '2018-10-01'
+        # if grid_size == 100:
+        #     dir_date = '2018-10-20'
+        # else:
+        dir_date = '2020-03-01'
         df_city = pd.read_csv('data/processed/grid/{}/{}/{}_data_{}.csv'.format(city, dir_date, city,grid_size))
         # scale city specific variables
         df_city = scaling_city(df_city, scale)
@@ -94,6 +94,13 @@ def scaling_city(df_city, scale):
     # calculate the mean of each
     elev_means = df_city[vars_elev].mean(axis=0)
     df_city[vars_elev] = df_city[vars_elev] - elev_means
+
+    ### Albedo ###
+    # multiply by 100 to get percent
+    # list alb vars
+    vars_alb = [i for i in vars_all if 'alb' in i]
+    # scale
+    df_city[vars_alb] = df_city[vars_alb]*100
 
 
 

@@ -10,6 +10,8 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.colors import ListedColormap
 import brewer2mpl
 import joypy
 import seaborn as sns
@@ -58,6 +60,11 @@ feature_names = {'lcov_11' : 'water %','tree_mean':'tree can. % mean','ndvi_mean
 
 CORES_NUM = min(50,int(os.cpu_count()*3/4))
 
+# colors
+col_pal = sns.color_palette(["#E69F00",'#009E73',"#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#56B4E9"])
+#null (orange), cnn (green), gam (yellow), boosted tree (dark blue), mars (red), mlr (pink), rf (light blue)
+col_cmp = ListedColormap(['#009E73', "#0072B2","#F0E442",  "#CC79A7","#D55E00", "#56B4E9"])
+# cnn (green), boosted tree (dark blue), gam (yellow),  mlr (pink), mars (red),rf (light blue)
 def main():
     '''
     '''
@@ -104,7 +111,7 @@ def import_data(grid_size, selected_vars = True):
         df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     else:
-        df = pd.read_csv('data/data_regressions_{}_20190419.csv'.format(grid_size))
+        df = pd.read_csv('data/data_regressions_{}_20200303.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     return(df)
 
@@ -126,7 +133,7 @@ def regressions(df, cities, sim_num, grid_size, do_par = False):
             single_regression(df_city, response, grid_size, predict_quant, i)
 
 
-def single_regression(df_city, response, grid_size, predict_quant):
+def single_regression(df_city, response, grid_size, predict_quant, i):
     '''
     fit the different models for a single holdout
     '''
@@ -980,7 +987,10 @@ def plot_holdouts(loss, grid_size):
                         order = ['night\n(mean)','day\n(mean)','night\n(max)','day\n(max)'],
                         kind="box",
                         height = height_2c, aspect = aspect_2c,
-                        legend = False)
+                        legend = False,
+                        showcaps = False,
+                        palette = col_pal,
+                        )
         g.set_titles('')
         for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
             if i%2==1:
@@ -1026,10 +1036,10 @@ def plot_importance(results_swing, grid_size):
                             data=results_swing, kind='bar', col='model',
                             order = feature_order,
                             hue_order=['lst_night_mean','lst_day_mean'],
-                            col_order=['random forest','gradient boosted\ntrees',
-                                        'multivariate adaptive\nspline (mars)',
-                                        'generalized additive\n(gam)',
-                                        'multivariate linear'],
+                            col_order=['random forest','g. boosted trees',
+                                        'multiv. adaptive spline (mars)',
+                                        'generalized additive (gam)',
+                                        'linear'],
                             height = height_2c*2,
                             aspect = 0.75
                             # col_wrap = 3
@@ -1053,6 +1063,7 @@ def plot_importance(results_swing, grid_size):
 def plot_importance_stacked(results_swing, grid_size):
     '''
     plot the feature importance of the variables and the cities
+    colorblind pallete https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
     '''
     plt.style.use(['tableau-colorblind10'])#,'dark_background'])
     fig_transparency = False
@@ -1083,13 +1094,16 @@ def plot_importance_stacked(results_swing, grid_size):
     mpl.rcParams.update(params)
     # order features by nocturnal swing
     results_swing = results_swing.replace(feature_names)
-    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+
 
     results_swing = results_swing.replace(model_names)
 
     results_swing['swing_weighted'] = results_swing.swing * results_swing.error
 
     for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        print(dep)
+        feature_order = list(results_swing[results_swing.dependent==dep].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+        print(feature_order)
         wing = results_swing.copy()
         wing = wing[wing.dependent == dep]
         wing = wing.pivot(index= 'independent', columns = 'model', values='swing')
@@ -1097,7 +1111,7 @@ def plot_importance_stacked(results_swing, grid_size):
         # plot
         font_scale = 3#1.75
         # with sns.plotting_context("paper", font_scale=font_scale):
-        g = wing.plot(stacked=True, kind='bar')
+        g = wing.plot(stacked=True, kind='bar',colormap=col_cmp)
 
         g.set_xlabel("")
         g.set_ylabel("variable\ninfluence")
@@ -1110,6 +1124,7 @@ def plot_importance_stacked(results_swing, grid_size):
         plt.savefig('fig/working/variableImportance_stack_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
         plt.clf()
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
     return(feature_order)
 
 def plot_importance_max(df, grid_size):
@@ -1135,11 +1150,11 @@ def plot_importance_max(df, grid_size):
                                 order = feature_order,
                                 # row_order=['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max'],
                                 col_order=['random forest',
-                                            'convolutional\nneural network',
-                                            'gradient boosted\ntrees',
-                                            'multivariate adaptive\nspline (mars)',
-                                            'generalized additive\n(gam)',
-                                            'multivariate linear'],
+                                            'c. neural network',
+                                            'g. boosted trees',
+                                            'multiv. adaptive spline (mars)',
+                                            'generalized additive (gam)',
+                                            'linear'],
                                 height = height_2c,
                                 aspect = 0.60,
                                 # col_wrap = 3
