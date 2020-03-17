@@ -87,7 +87,7 @@ def holdout_results(grid_size):
 
 if __name__ == '__main__':
     # profile() # initialise the board
-    grid_size = 500
+    grid_size = 100
     pdp_results(grid_size)
-    varimp_results(grid_size)
-    holdout_results(grid_size)
+    # varimp_results(grid_size)
+    # holdout_results(grid_size)

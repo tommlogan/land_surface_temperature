@@ -58,7 +58,7 @@ feature_names = {'lcov_11' : 'water %','tree_mean':'tree can. % mean','ndvi_mean
                 'ndvi_sd': 'ndvi sdev'
                 }
 
-CORES_NUM = min(50,int(os.cpu_count()*3/4))
+CORES_NUM = 10 #min(50,int(os.cpu_count()*3/4))
 
 # colors
 col_pal = sns.color_palette(["#E69F00",'#009E73',"#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#56B4E9"])
@@ -127,7 +127,7 @@ def regressions(df, cities, sim_num, grid_size, do_par = False):
     df_city, response = prepare_lst_prediction(df_city)
     # conduct the holdout
     if do_par:
-        Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(sim_num))
+        Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(93,sim_num))
     else:
         for i in range(sim_num):
             single_regression(df_city, response, grid_size, predict_quant, i)
@@ -765,10 +765,11 @@ def calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nigh
 # Supporting code
 ###
 
-def split_holdout(df, response, test_size):
+def split_holdout(df_arg, response, test_size):
     '''
     Prepare spatial holdout
     '''
+    df = df_arg.copy()
     # what is the total number of records?
     n_records = df.shape[0]
     # what are the holdout numbers to draw from?
@@ -994,7 +995,7 @@ def plot_holdouts(loss, grid_size):
         g.set_titles('')
         for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
             if i%2==1:
-                ax.set_ylim(0,5)
+                ax.set_ylim(0,2.5)
                 ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
                 ax.set_xlabel('')
             elif i%2==0:
