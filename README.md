@@ -1,4 +1,8 @@
 # Land Surface Temperature
+
+Logan, T. M., Zaitchik, B., & Guikema, S. D. (2020). Night and Day: What is the influence and relative importance of urban characteristics on land surface temperature? *Remote Sensing of Environment*.
+
+
 Tom M Logan  
 www.tomlogan.co.nz
 
