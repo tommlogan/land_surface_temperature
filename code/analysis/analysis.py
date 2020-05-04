@@ -10,6 +10,8 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.colors import ListedColormap
 import brewer2mpl
 import joypy
 import seaborn as sns
@@ -41,23 +43,28 @@ RANDOM_SEED = 3201
 
 # other constants
 city_names = {'bal':'baltimore','por':'portland','phx':'phoenix','det':'detroit'}
-model_names = {'rf':'random forest','mlr':'multivariate linear',
-                'gam':'generalized additive\n(gam)',
-                'gbrt':'gradient boosted\ntrees',
-                'mars':'multivariate adaptive\nspline (mars)',
-                'cnn':'convolutional\nneural network'}
-feature_names = {'lcov_11' : '% water','tree_mean':'% tree canopy','ndvi_mean':'ndvi',
-                'svf_mean':'sky view factor','dsm_mean':'digital surface model',
-                'alb_mean':'albedo','dsm_sd':'dsm stand. dev.','nbdi_max':'max nbdi',
-                'tree_max':'max % tree can.','bldg':'% building area','pdens_mean':'pop. density',
-                'tree_min':'min % tree can.','svf_max':'max sky view factor',
-                'tree_sd': '% tree can. stand. dev.', 'nbdi_sd_sl':'nbdi surrounding stand. dev.',
-                'tree_sd_sl':'% tree can. surrounding stand. dev.',
-                'ndvi_sd': 'ndvi stand. dev'
+model_names = {'rf':'random forest','mlr':'linear',
+                'gam':'generalized additive (gam)',
+                'gbrt':'g. boosted trees',
+                'mars':'multiv. adaptive spline (mars)',
+                'cnn':'c. neural network'}
+feature_names = {'lcov_11' : 'water %','tree_mean':'tree can. % mean','ndvi_mean':'ndvi',
+                'svf_mean':'sky view factor mean','dsm_mean':'d. surface model mean',
+                'alb_mean':'albedo mean','dsm_sd':'d. surface model sdev','nbdi_max':'nbdi max',
+                'tree_max':'tree can. % max','bldg':'building % area','pdens_mean':'pop. density',
+                'tree_min':'tree can. % min','svf_max':'sky view factor max',
+                'tree_sd': 'tree can. % sdev.', 'nbdi_sd_sl':'nbdi surrounding sdev.',
+                'tree_sd_sl':'tree can. % surrounding sdev.',
+                'ndvi_sd': 'ndvi sdev'
                 }
 
-CORES_NUM = min(50,int(os.cpu_count()*3/4))
+CORES_NUM = 10 #min(50,int(os.cpu_count()*3/4))
 
+# colors
+col_pal = sns.color_palette(["#E69F00",'#009E73',"#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#56B4E9"])
+#null (orange), cnn (green), gam (yellow), boosted tree (dark blue), mars (red), mlr (pink), rf (light blue)
+col_cmp = ListedColormap(['#009E73', "#0072B2","#F0E442",  "#CC79A7","#D55E00", "#56B4E9"])
+# cnn (green), boosted tree (dark blue), gam (yellow),  mlr (pink), mars (red),rf (light blue)
 def main():
     '''
     '''
@@ -104,7 +111,7 @@ def import_data(grid_size, selected_vars = True):
         df = pd.read_csv('data/data_vif_{}.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     else:
-        df = pd.read_csv('data/data_regressions_{}_20190419.csv'.format(grid_size))
+        df = pd.read_csv('data/data_regressions_{}_20200303.csv'.format(grid_size))
         df = df.drop('Unnamed: 0', axis=1)
     return(df)
 
@@ -120,13 +127,13 @@ def regressions(df, cities, sim_num, grid_size, do_par = False):
     df_city, response = prepare_lst_prediction(df_city)
     # conduct the holdout
     if do_par:
-        Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(sim_num))
+        Parallel(n_jobs=CORES_NUM)(delayed(single_regression)(df_city, response, grid_size, predict_quant, i) for i in range(93,sim_num))
     else:
         for i in range(sim_num):
             single_regression(df_city, response, grid_size, predict_quant, i)
 
 
-def single_regression(df_city, response, grid_size, predict_quant):
+def single_regression(df_city, response, grid_size, predict_quant, i):
     '''
     fit the different models for a single holdout
     '''
@@ -758,10 +765,11 @@ def calculate_errors(y, predict_day, predict_night, predict_daymax, predict_nigh
 # Supporting code
 ###
 
-def split_holdout(df, response, test_size):
+def split_holdout(df_arg, response, test_size):
     '''
     Prepare spatial holdout
     '''
+    df = df_arg.copy()
     # what is the total number of records?
     n_records = df.shape[0]
     # what are the holdout numbers to draw from?
@@ -980,11 +988,14 @@ def plot_holdouts(loss, grid_size):
                         order = ['night\n(mean)','day\n(mean)','night\n(max)','day\n(max)'],
                         kind="box",
                         height = height_2c, aspect = aspect_2c,
-                        legend = False)
+                        legend = False,
+                        showcaps = False,
+                        palette = col_pal,
+                        )
         g.set_titles('')
         for i, ax in enumerate(g.axes.flat): # set every-other axis for testing purposes
             if i%2==1:
-                ax.set_ylim(0,5)
+                ax.set_ylim(0,2.5)
                 ax.set_ylabel('mean absolute error ($^o$C)',size=font_size*1.5)
                 ax.set_xlabel('')
             elif i%2==0:
@@ -998,6 +1009,13 @@ def plot_holdouts(loss, grid_size):
         plt.savefig('fig/report/holdout_results_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
         plt.clf()
+
+        # save the results to csv
+        loss = loss.replace({'diurnal':'lst_day_mean','diurnalmax':'lst_day_max','nocturnal':'lst_night_mean','nocturnalmax':'lst_night_max', 'gbrf':'gbrt'})
+        loss_mean = loss.groupby(['error_metric','time_of_day','model']).mean()['error']
+        loss_mean = loss_mean.unstack(-1)
+        loss_mean.to_csv('fig/working/holdout_results_{}.csv'.format(grid_size))
+        print(loss_mean)
 
 def plot_importance(results_swing, grid_size):
     '''
@@ -1019,10 +1037,10 @@ def plot_importance(results_swing, grid_size):
                             data=results_swing, kind='bar', col='model',
                             order = feature_order,
                             hue_order=['lst_night_mean','lst_day_mean'],
-                            col_order=['random forest','gradient boosted\ntrees',
-                                        'multivariate adaptive\nspline (mars)',
-                                        'generalized additive\n(gam)',
-                                        'multivariate linear'],
+                            col_order=['random forest','g. boosted trees',
+                                        'multiv. adaptive spline (mars)',
+                                        'generalized additive (gam)',
+                                        'linear'],
                             height = height_2c*2,
                             aspect = 0.75
                             # col_wrap = 3
@@ -1041,6 +1059,73 @@ def plot_importance(results_swing, grid_size):
         plt.savefig('fig/report/variableImportance_{}.pdf'.format(grid_size), format='pdf', dpi=500, transparent=True)
         plt.show()
         plt.clf()
+    return(feature_order)
+
+def plot_importance_stacked(results_swing, grid_size):
+    '''
+    plot the feature importance of the variables and the cities
+    colorblind pallete https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
+    '''
+    plt.style.use(['tableau-colorblind10'])#,'dark_background'])
+    fig_transparency = False
+    # figure size (cm)
+    width_1col = 8.7/2.54
+    width_2col = 17.8/2.54
+    golden_mean = (sqrt(5)-1.0)/2.0    # Aesthetic ratio
+    height_1c = width_1col*golden_mean
+    height_2c = width_2col*golden_mean
+    aspect_2c = width_2col/height_2c
+    # font size
+    font_size = 8
+    dpi = 500
+    # additional parameters
+    params = {'axes.labelsize': font_size, # fontsize for x and y labels (was 10)
+              'font.size': font_size, # was 10
+              'legend.fontsize': font_size * 2/3, # was 10
+              'xtick.labelsize': font_size,
+              'font.sans-serif' : 'Corbel',
+              # 'ytick.labelsize': 0,
+              'lines.linewidth' : 1,
+              'figure.autolayout' : True,
+              'figure.figsize': [width_1col, height_1c],#[fig_width/2.54,fig_height/2.54]
+              'axes.spines.top'    : False,
+              'axes.spines.right'  : False,
+              'axes.xmargin' : 0
+    }
+    mpl.rcParams.update(params)
+    # order features by nocturnal swing
+    results_swing = results_swing.replace(feature_names)
+
+
+    results_swing = results_swing.replace(model_names)
+
+    results_swing['swing_weighted'] = results_swing.swing * results_swing.error
+
+    for dep in ['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max']:
+        print(dep)
+        feature_order = list(results_swing[results_swing.dependent==dep].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
+        print(feature_order)
+        wing = results_swing.copy()
+        wing = wing[wing.dependent == dep]
+        wing = wing.pivot(index= 'independent', columns = 'model', values='swing')
+
+        # plot
+        font_scale = 3#1.75
+        # with sns.plotting_context("paper", font_scale=font_scale):
+        g = wing.plot(stacked=True, kind='bar',colormap=col_cmp)
+
+        g.set_xlabel("")
+        g.set_ylabel("variable\ninfluence")
+        g.set_ylim(0,2.5)
+        g.axes.xaxis.set_ticklabels([])
+        g.legend().remove()
+        # g.legend(loc='lower center', ncol=3, frameon=False)
+
+
+        plt.savefig('fig/working/variableImportance_stack_{}_{}.pdf'.format(dep, grid_size), format='pdf', dpi=500, transparent=True)
+        plt.show()
+        plt.clf()
+    feature_order = list(results_swing[results_swing.dependent=='lst_night_mean'].groupby('independent').mean().sort_values(by=('swing'),ascending=False).index)
     return(feature_order)
 
 def plot_importance_max(df, grid_size):
@@ -1066,11 +1151,11 @@ def plot_importance_max(df, grid_size):
                                 order = feature_order,
                                 # row_order=['lst_night_mean','lst_day_mean','lst_night_max','lst_day_max'],
                                 col_order=['random forest',
-                                            'convolutional\nneural network',
-                                            'gradient boosted\ntrees',
-                                            'multivariate adaptive\nspline (mars)',
-                                            'generalized additive\n(gam)',
-                                            'multivariate linear'],
+                                            'c. neural network',
+                                            'g. boosted trees',
+                                            'multiv. adaptive spline (mars)',
+                                            'generalized additive (gam)',
+                                            'linear'],
                                 height = height_2c,
                                 aspect = 0.60,
                                 # col_wrap = 3

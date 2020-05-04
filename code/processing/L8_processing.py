@@ -32,6 +32,7 @@ from osgeo import gdal_array
 from osgeo import osr
 import shapefile
 from matplotlib import pyplot as plt
+import code
 # from rpy2.robjects.packages import importr
 import subprocess
 import os
@@ -54,7 +55,7 @@ def main():
     # loop rows
     for index, info_satellite in source_satellite.iterrows():
         # process the image
-        logger.info('Processing image {}'.format(info_satellite['landsat_product_id']))
+        logger.info('Processing image {}: {}'.format(info_satellite['city'], info_satellite['landsat_product_id']))
         process_image(info_satellite, source_city)
 
     # take average of images
@@ -105,12 +106,13 @@ def read_metadata(info_satellite):
     fn_metadata = 'data/raw/{}/{}_MTL.txt'.format(info_satellite['city'],info_satellite['landsat_product_id'])
     #
     # list of variables needed from metadata
-    meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10'])
-    bands = [1,2,3,4,5,6,10]
+    meta_variables = set(['K1_CONSTANT_BAND_10','K2_CONSTANT_BAND_10','SUN_ELEVATION'])
+    bands = [1,2,3,4,5,6,7,10]
     # include radiance re-scaling factors
     for rad in ['MULT', 'ADD']:
         for b in bands:
             meta_variables.add('RADIANCE_{}_BAND_{}'.format(rad, b))
+            meta_variables.add('REFLECTANCE_{}_BAND_{}'.format(rad, b))
     #
     # init dictionary
     meta_dict = dict.fromkeys(meta_variables)
@@ -157,7 +159,7 @@ def clip_geographic_data(info_satellite, source_city):
     fn_impervious_surface = source_city['impervious'][city_idx].values[0]
     fn_elevation = source_city['elevation'][city_idx].values[0]
     fn_boundary = source_city['city_parcels'][city_idx].values[0]
-    bands = '1,2,3,4,5,6,10'
+    bands = '1,2,3,4,5,6,7,10'
     # args into list - order does not matter, it is sorted at the bottom of the R script
     args_clip = [city, landsat_product_id, fn_land_cover, fn_boundary, bands, fn_tree_canopy, fn_impervious_surface, fn_elevation]
     #
@@ -183,7 +185,7 @@ def calc_LST(info_satellite, meta_dict, source_city):
     dn = image_b10.ReadAsArray()
 
     # conversion to TOA radiance
-    TOA = calc_TOA(dn, meta_dict, 10)
+    TOA = calc_TOA_radiance(dn, meta_dict, 10)
 
     # write thermal radiance to tif
     TOA_write = TOA.copy()
@@ -207,17 +209,33 @@ def calc_LST(info_satellite, meta_dict, source_city):
     array_to_raster(temp_surface, fn_out, image_b10)
 
 
-def calc_TOA(dn, meta_dict, band_number):
+def calc_TOA_radiance(dn, meta_dict, band_number):
     '''
-        Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band 10 digital
+        Calculate the Top Atmosphere Spectral Radiance (TOAr) from Band digital
         number (DN) data (also refered to as the Q_cal - quantized and
         calibrated standard product pixel value)
+        https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
     '''
-    logger.info('Calculating TOAr')
+    logger.info('Calculating TOA radiance')
 
     TOAr = meta_dict['RADIANCE_MULT_BAND_{}'.format(band_number)] * dn + meta_dict['RADIANCE_ADD_BAND_{}'.format(band_number)]
 
     return(TOAr)
+
+def calc_TOA_reflectance(dn, meta_dict, band_number):
+    '''
+        Calculate the Top Atmosphere Spectral Reflectance
+        https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
+    '''
+    logger.info('Calculating TOA reflectance')
+
+    # planetary reflectance without solar angle correction
+    TOA_uncorrected = meta_dict['REFLECTANCE_MULT_BAND_{}'.format(band_number)] * dn + meta_dict['REFLECTANCE_ADD_BAND_{}'.format(band_number)]
+    # correct for solar angle
+    reflect = TOA_uncorrected/np.sin(np.radians(meta_dict['SUN_ELEVATION']))
+
+
+    return(reflect)
 
 
 def determine_emissivity(info_satellite, dn, source_city):
@@ -313,7 +331,7 @@ def atmos_correction(temp_satellite, info_satellite, emissivity):
 
 def calc_albedo(info_satellite, meta_dict):
     '''
-        Calculate albedo from bands 1-5
+        Calculate albedo from bands 1,3,4,5,7
         This is calculated using Smith's normalized Liang el al. algorithm
         Reference:
             Smith, R. B., 2010: The heat budget of the earth’s surface deduced from space. Tech. rep., Yale, http://www.yale.edu/ceo/Documentation/Landsat DN to Albedo.pdf.)
@@ -325,17 +343,16 @@ def calc_albedo(info_satellite, meta_dict):
 
     # calculating the reflectivity of each band
     reflect_band = dict()
-    band = 1
-    for band in [1,2,3,4,5]:
+    for band in [1,2,3,4,5,7]:
         fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
         dn = ds.ReadAsArray()
-        reflect_band[band] = calc_TOA(dn, meta_dict, band)
+        reflect_band[band] = calc_TOA_reflectance(dn, meta_dict, band)
 
     # calculate the albedo
-    albedo = ((0.356*reflect_band[1]) + (0.130*reflect_band[2]) +
-            (0.373*reflect_band[3]) + (0.085*reflect_band[4]) +
-            (0.072*reflect_band[5]) - 0.018) / 1.016
+    albedo = ((0.356*reflect_band[1]) + (0.130*reflect_band[3]) +
+            (0.373*reflect_band[4]) + (0.085*reflect_band[5]) +
+            (0.072*reflect_band[7]) - 0.0018) / 1.016
 
     # remove no data values
     albedo[albedo < 0] = np.nan
@@ -353,7 +370,6 @@ def calc_NDVI(info_satellite):
     logger.info('Calculating the ndvi')
     # import bands
     landsat_band = dict()
-    band = 1
     for band in [1,2,3,4,5]:
         fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
@@ -377,8 +393,7 @@ def calc_NBDI(info_satellite):
     logger.info('Calculating the nbdi')
     # import bands
     landsat_band = dict()
-    band = 1
-    for band in [1,2,3,4,5, 6]:
+    for band in [1,2,3,4,5,6]:
         fn_sat = 'data/intermediate/{}/{}_B{}.tif'.format(info_satellite['city'], info_satellite['landsat_product_id'], band)
         ds = gdal.Open(fn_sat)
         landsat_band[band] = ds.ReadAsArray()

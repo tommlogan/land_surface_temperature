@@ -5,6 +5,7 @@ literature
 *.RData
 bayesnet
 data
+!.gitkeep
 **/_scratch
 *.Rproj
 figs/exploratory
@@ -25,8 +26,8 @@ venv
 .Rproj.user
 Index
 *.tbx
-**/.ipynb_checkpoints
-code/analysis/cnn
+**\.ipynb_checkpoints\*
+**/.ipynb_checkpoints/*
 *.log
 submission/
 *.ini
