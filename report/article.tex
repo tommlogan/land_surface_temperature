@@ -174,7 +174,7 @@ The constraint on selecting more cities was the time and computational requireme
 
 \subsection{Land surface temperature (dependent variable)}
 We calculate land surface temperature using Landsat 8 (Land Processes Distributed Active Archive Center product) imagery, land cover data, and an air temperature observation (data sources provided in \ref{tab:data}). 
-Our code is available on our Github\footnote{URL redacted for review} repository, and follows the process described in \cite{Scott2016-lc}:
+Our code is available on our Github\footnote{\url{https://github.com/tommlogan/land_surface_temperature}} repository, and follows the process described in \cite{Scott2016-lc}:
 \begin{itemize}
     \item 
         Convert Band-10 digital-number data to top-of-atmosphere radiance \citep{Jimenez-Munoz2003-wc}: 
@@ -663,9 +663,8 @@ Increasing and decreasing these, respectively, is necessary for reducing high ur
 
 % Here are two sample references: \citep{Feynman1963118,Dirac1953888}.
 \section*{Acknowledgements}
-% TML conducted the majority of this research as a graduate student at the University of Michigan with the support of a Rackham PreDoctoral Fellowship.
-% The work was also supported by the US National Science Foundation's Grant SEES-1631409. 
-% This support is gratefully acknowledged.
+The work was funded by the US National Science Foundation's Grant SEES-1631409 and a University of Michigan Rackham PreDoctoral Fellowship. 
+This support is gratefully acknowledged.
 
 \section*{References}
 \singlespacing
@@ -768,7 +767,7 @@ Portland  & Day   & 30-Jul-17 & 11:55 & 2.9\%          \\
 \section{Code for the land surface temperature calculation}
 \label{appendix:code}
 
-This is an extract of the code provided in the GitHub repository: []
+This is an extract of the code provided in the GitHub repository: \url{https://github.com/tommlogan/land_surface_temperature}
 
 \begin{lstlisting}[language=Python]
 

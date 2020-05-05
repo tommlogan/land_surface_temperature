@@ -87,7 +87,7 @@ This generally follows the process described in [Sahana, M., Ahmed, R., & Sajjad
   This is done within running `code/processing/L8_processing.py`
 
   This is a plot of the mean LST for Baltimore
-    ![image](fig/map/lst_day_mean.jpg)
+    ![image](fig/lst_day_mean.jpg)
 
     30m resolution
 
